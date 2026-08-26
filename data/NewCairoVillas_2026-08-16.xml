@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<APIBusinessObjects xmlns="http://xmlns.oracle.com/Primavera/P6/V1/APIBusinessObjects">
+  <Project>
+    <ObjectId>5001</ObjectId>
+    <Id>VILLAS-C3</Id>
+    <Name>New Cairo Villas - Cluster 3</Name>
+    <StartDate>2026-06-14T00:00:00</StartDate>
+    <FinishDate>2026-10-24T00:00:00</FinishDate>
+    <DataDate>2026-08-16T00:00:00</DataDate>
+  </Project>
+  <WBS>
+    <ObjectId>50001</ObjectId>
+    <ProjectObjectId>5001</ProjectObjectId>
+    <Code>C3</Code>
+    <Name>Villas Cluster 3</Name>
+  </WBS>
+  <Activity>
+    <ObjectId>60001</ObjectId>
+    <ProjectObjectId>5001</ProjectObjectId>
+    <WBSObjectId>50001</WBSObjectId>
+    <Id>MS400</Id>
+    <Name>Notice to Proceed</Name>
+    <Type>Start Milestone</Type>
+    <PlannedDuration>0</PlannedDuration>
+    <RemainingDuration>0</RemainingDuration>
+    <PercentComplete>100</PercentComplete>
+    <Status>Complete</Status>
+    <ActualStartDate>2026-06-14T00:00:00</ActualStartDate>
+    <ActualFinishDate>2026-06-14T00:00:00</ActualFinishDate>
+    <StartDate>2026-06-14T00:00:00</StartDate>
+    <FinishDate>2026-06-14T00:00:00</FinishDate>
+    <TotalFloat>0</TotalFloat>
+    <IsCritical>true</IsCritical>
+  </Activity>
+  <Activity>
+    <ObjectId>60002</ObjectId>
+    <ProjectObjectId>5001</ProjectObjectId>
+    <WBSObjectId>50001</WBSObjectId>
+    <Id>D1010</Id>
+    <Name>Earthworks &amp; Shoring</Name>
+    <Type>Task Dependent</Type>
+    <PlannedDuration>12</PlannedDuration>
+    <RemainingDuration>0</RemainingDuration>
+    <PercentComplete>100</PercentComplete>
+    <Status>Complete</Status>
+    <ActualStartDate>2026-06-14T00:00:00</ActualStartDate>
+    <ActualFinishDate>2026-06-26T00:00:00</ActualFinishDate>
+    <StartDate>2026-06-14T00:00:00</StartDate>
+    <FinishDate>2026-06-26T00:00:00</FinishDate>
+    <TotalFloat>0</TotalFloat>
+    <IsCritical>true</IsCritical>
+  </Activity>
+  <Activity>
+    <ObjectId>60003</ObjectId>
+    <ProjectObjectId>5001</ProjectObjectId>
+    <WBSObjectId>50001</WBSObjectId>
+    <Id>D1020</Id>
+    <Name>Substructure (Villas 1-6)</Name>
+    <Type>Task Dependent</Type>
+    <PlannedDuration>25</PlannedDuration>
+    <RemainingDuration>0</RemainingDuration>
+    <PercentComplete>100</PercentComplete>
+    <Status>Complete</Status>
+    <ActualStartDate>2026-06-26T00:00:00</ActualStartDate>
+    <ActualFinishDate>2026-07-21T00:00:00</ActualFinishDate>
+    <StartDate>2026-06-26T00:00:00</StartDate>
+    <FinishDate>2026-07-21T00:00:00</FinishDate>
+    <TotalFloat>0</TotalFloat>
+    <IsCritical>true</IsCritical>
+  </Activity>
+  <Activity>
+    <ObjectId>60004</ObjectId>
+    <ProjectObjectId>5001</ProjectObjectId>
+    <WBSObjectId>50001</WBSObjectId>
+    <Id>D1030</Id>
+    <Name>Superstructure (Villas 1-6)</Name>
+    <Type>Task Dependent</Type>
+    <PlannedDuration>35</PlannedDuration>
+    <RemainingDuration>9</RemainingDuration>
+    <PercentComplete>74</PercentComplete>
+    <Status>InProgress</Status>
+    <ActualStartDate>2026-07-21T00:00:00</ActualStartDate>
+    <StartDate>2026-07-21T00:00:00</StartDate>
+    <FinishDate>2026-08-25T00:00:00</FinishDate>
+    <TotalFloat>0</TotalFloat>
+    <IsCritical>true</IsCritical>
+  </Activity>
+  <Activity>
+    <ObjectId>60005</ObjectId>
+    <ProjectObjectId>5001</ProjectObjectId>
+    <WBSObjectId>50001</WBSObjectId>
+    <Id>D1040</Id>
+    <Name>MEP &amp; Finishes</Name>
+    <Type>Task Dependent</Type>
+    <PlannedDuration>40</PlannedDuration>
+    <RemainingDuration>40</RemainingDuration>
+    <PercentComplete>0</PercentComplete>
+    <Status>NotStarted</Status>
+    <StartDate>2026-08-25T00:00:00</StartDate>
+    <FinishDate>2026-10-04T00:00:00</FinishDate>
+    <TotalFloat>0</TotalFloat>
+    <IsCritical>true</IsCritical>
+  </Activity>
+  <Activity>
+    <ObjectId>60006</ObjectId>
+    <ProjectObjectId>5001</ProjectObjectId>
+    <WBSObjectId>50001</WBSObjectId>
+    <Id>D1050</Id>
+    <Name>External Works &amp; Landscaping</Name>
+    <Type>Task Dependent</Type>
+    <PlannedDuration>20</PlannedDuration>
+    <RemainingDuration>20</RemainingDuration>
+    <PercentComplete>0</PercentComplete>
+    <Status>NotStarted</Status>
+    <StartDate>2026-10-04T00:00:00</StartDate>
+    <FinishDate>2026-10-24T00:00:00</FinishDate>
+    <TotalFloat>0</TotalFloat>
+    <IsCritical>true</IsCritical>
+  </Activity>
+  <Activity>
+    <ObjectId>60007</ObjectId>
+    <ProjectObjectId>5001</ProjectObjectId>
+    <WBSObjectId>50001</WBSObjectId>
+    <Id>MS410</Id>
+    <Name>Practical Completion / Handover</Name>
+    <Type>Start Milestone</Type>
+    <PlannedDuration>0</PlannedDuration>
+    <RemainingDuration>0</RemainingDuration>
+    <PercentComplete>0</PercentComplete>
+    <Status>NotStarted</Status>
+    <StartDate>2026-10-24T00:00:00</StartDate>
+    <FinishDate>2026-10-24T00:00:00</FinishDate>
+    <TotalFloat>0</TotalFloat>
+    <IsCritical>true</IsCritical>
+  </Activity>
+  <Relationship>
+    <ObjectId>70001</ObjectId>
+    <PredecessorActivityObjectId>60001</PredecessorActivityObjectId>
+    <SuccessorActivityObjectId>60002</SuccessorActivityObjectId>
+    <Type>Finish to Start</Type>
+    <Lag>0</Lag>
+  </Relationship>
+  <Relationship>
+    <ObjectId>70002</ObjectId>
+    <PredecessorActivityObjectId>60002</PredecessorActivityObjectId>
+    <SuccessorActivityObjectId>60003</SuccessorActivityObjectId>
+    <Type>Finish to Start</Type>
+    <Lag>0</Lag>
+  </Relationship>
+  <Relationship>
+    <ObjectId>70003</ObjectId>
+    <PredecessorActivityObjectId>60003</PredecessorActivityObjectId>
+    <SuccessorActivityObjectId>60004</SuccessorActivityObjectId>
+    <Type>Finish to Start</Type>
+    <Lag>0</Lag>
+  </Relationship>
+  <Relationship>
+    <ObjectId>70004</ObjectId>
+    <PredecessorActivityObjectId>60004</PredecessorActivityObjectId>
+    <SuccessorActivityObjectId>60005</SuccessorActivityObjectId>
+    <Type>Finish to Start</Type>
+    <Lag>0</Lag>
+  </Relationship>
+  <Relationship>
+    <ObjectId>70005</ObjectId>
+    <PredecessorActivityObjectId>60005</PredecessorActivityObjectId>
+    <SuccessorActivityObjectId>60006</SuccessorActivityObjectId>
+    <Type>Finish to Start</Type>
+    <Lag>0</Lag>
+  </Relationship>
+  <Relationship>
+    <ObjectId>70006</ObjectId>
+    <PredecessorActivityObjectId>60006</PredecessorActivityObjectId>
+    <SuccessorActivityObjectId>60007</SuccessorActivityObjectId>
+    <Type>Finish to Start</Type>
+    <Lag>0</Lag>
+  </Relationship>
+</APIBusinessObjects>

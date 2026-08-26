@@ -1,0 +1,28 @@
+ERMHDR	21.12	2026-08-16	Project	sherif.pm		Project Management	EGP
+%T	PROJECT
+%F	proj_id	proj_short_name	plan_start_date	plan_end_date	last_recalc_date
+%R	3001	SOKHNA-WH	2026-06-21 00:00	2026-10-07 00:00	2026-08-16 00:00
+%T	CALENDAR
+%F	clndr_id	clndr_name	day_hr_cnt
+%R	1	Standard 6 Day Week	8
+%T	PROJWBS
+%F	wbs_id	proj_id	parent_wbs_id	wbs_short_name	wbs_name
+%R	30001	3001		WH1	Sokhna Logistics Warehouse
+%T	TASK
+%F	task_id	proj_id	wbs_id	task_code	task_name	task_type	target_drtn_hr_cnt	remain_drtn_hr_cnt	act_start_date	act_end_date	early_start_date	early_end_date	late_start_date	late_end_date	total_float_hr_cnt	phys_complete_pct	status_code	driving_path_flag
+%R	40001	3001	30001	MS300	Notice to Proceed	TT_Mile	0	0	2026-06-21 00:00	2026-06-21 00:00	2026-06-21 00:00	2026-06-21 00:00	2026-06-21 00:00	2026-06-21 00:00	0	100	TK_Complete	Y
+%R	40002	3001	30001	C1010	Site Clearance & Grading	TT_Task	120	0	2026-06-21 00:00	2026-07-06 00:00	2026-06-21 00:00	2026-07-06 00:00	2026-06-21 00:00	2026-07-06 00:00	0	100	TK_Complete	Y
+%R	40003	3001	30001	C1020	Steel Foundations	TT_Task	144	0	2026-07-06 00:00	2026-07-24 00:00	2026-07-06 00:00	2026-07-24 00:00	2026-07-06 00:00	2026-07-24 00:00	0	100	TK_Complete	Y
+%R	40004	3001	30001	C1030	Steel Structure Erection	TT_Task	240	56	2026-07-24 00:00		2026-07-24 00:00	2026-08-23 00:00	2026-07-24 00:00	2026-08-23 00:00	0	77	TK_Active	Y
+%R	40005	3001	30001	C1040	Metal Cladding & Roofing	TT_Task	200	200			2026-08-23 00:00	2026-09-17 00:00	2026-08-23 00:00	2026-09-17 00:00	0	0	TK_NotStart	Y
+%R	40006	3001	30001	C1050	MEP & Fire Systems	TT_Task	160	160			2026-09-17 00:00	2026-10-07 00:00	2026-09-17 00:00	2026-10-07 00:00	0	0	TK_NotStart	Y
+%R	40007	3001	30001	MS310	Practical Completion / Handover	TT_Mile	0	0			2026-10-07 00:00	2026-10-07 00:00	2026-10-07 00:00	2026-10-07 00:00	0	0	TK_NotStart	Y
+%T	TASKPRED
+%F	task_pred_id	task_id	pred_task_id	pred_type	lag_hr_cnt
+%R	50001	40002	40001	PR_FS	0
+%R	50002	40003	40002	PR_FS	0
+%R	50003	40004	40003	PR_FS	0
+%R	50004	40005	40004	PR_FS	0
+%R	50005	40006	40005	PR_FS	0
+%R	50006	40007	40006	PR_FS	0
+%E
