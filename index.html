@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Portfolio Overview</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bp-navy: #122436;
+    --bp-navy-deep: #0C1C2A;
+    --bp-panel: #1B3A54;
+    --bp-panel-hi: #16324A;
+    --bp-panel-line: #2E5878;
+    --bp-line: #3E6E90;
+    --bp-line-faint: rgba(122,168,201,0.14);
+    --paper: #F1EDE1;
+    --paper-dim: #A9BAC7;
+    --hi-vis: #E86A1C;
+    --hi-vis-dim: rgba(232,106,28,0.16);
+    --status-green: #5FA982;
+    --status-green-dim: rgba(95,169,130,0.16);
+    --status-amber: #D8AC52;
+    --status-amber-dim: rgba(216,172,82,0.16);
+    --data-cyan: #7FC4DC;
+    --data-cyan-dim: rgba(127,196,220,0.14);
+    --radius: 3px;
+  }
+  *{ box-sizing: border-box; }
+  html{ -webkit-text-size-adjust: 100%; }
+  body{
+    margin:0;
+    background: var(--bp-navy-deep);
+    color: var(--paper);
+    font-family: 'Space Grotesk', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection{ background: var(--hi-vis-dim); color: var(--paper); }
+  .mono{ font-family:'JetBrains Mono', ui-monospace, monospace; }
+  a{ color: inherit; }
+  button{ font: inherit; }
+  :focus-visible{ outline: 2px solid var(--data-cyan); outline-offset: 1px; }
+
+  .sheet{
+    max-width: 1320px;
+    margin: 0 auto;
+    background:
+      repeating-linear-gradient(0deg, var(--bp-line-faint) 0px, transparent 1px, transparent 32px, var(--bp-line-faint) 33px),
+      repeating-linear-gradient(90deg, var(--bp-line-faint) 0px, transparent 1px, transparent 32px, var(--bp-line-faint) 33px),
+      var(--bp-navy);
+    border-left: 1px solid var(--bp-line);
+    border-right: 1px solid var(--bp-line);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== Header / title strip ===== */
+  .titlestrip{
+    display:flex; justify-content: space-between; align-items: flex-end;
+    padding: 20px 32px 14px 32px;
+    border-bottom: 1px solid var(--bp-line);
+    background: var(--bp-navy);
+    gap: 16px; flex-wrap: wrap;
+  }
+  .titlestrip .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 0.12em;
+    color: var(--data-cyan); margin: 0 0 6px 0; text-transform: uppercase;
+  }
+  .titlestrip h1{ font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  .titlestrip .datadate{ font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--paper-dim); text-align: right; line-height: 1.7; }
+  .titlestrip .datadate b{ color: var(--paper); font-weight: 500; }
+
+  .navbar{ position: sticky; top: 0; z-index: 40; background: var(--bp-navy-deep); border-bottom: 1px solid var(--bp-line); }
+  .navrow{ display:flex; gap: 2px; padding: 0 32px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .navrow::-webkit-scrollbar{ display: none; }
+  .navtab{
+    font-family:'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.03em;
+    padding: 12px 15px; color: var(--paper-dim); border: none; background: none; cursor: pointer;
+    border-bottom: 2px solid transparent; white-space: nowrap; flex-shrink: 0;
+  }
+  .navtab:hover{ color: var(--paper-dim); }
+  .navtab.active{ color: var(--paper); font-weight: 600; border-bottom: 3px solid var(--hi-vis); background: var(--bp-panel); box-shadow: inset 0 1px 0 var(--bp-panel-line); }
+  .navtab.active:hover{ color: var(--paper); }
+
+  main{ flex: 1; }
+  section.content{ padding: 26px 32px 10px 32px; display: none; }
+  section.content.active{ display: block; animation: fadein .18s ease; }
+  @keyframes fadein{ from{ opacity: 0; transform: translateY(4px); } to{ opacity: 1; transform: none; } }
+
+  .sectionlabel{
+    font-family:'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase;
+    color: var(--paper-dim); margin: 0 0 14px 0; padding-bottom: 8px; border-bottom: 1px solid var(--bp-panel-line);
+    display:flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  }
+  .sectionlabel .hint{ font-weight: 400; letter-spacing: 0.04em; color: var(--bp-line); text-transform: none; }
+
+  /* ===== KPI cards ===== */
+  .kpirow{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .kpirow.five{ grid-template-columns: repeat(5, 1fr); }
+  .kpi{ background: var(--bp-panel); border: 1px solid var(--bp-panel-line); border-radius: var(--radius); padding: 15px 17px; position: relative; overflow: hidden; min-width: 0; }
+  .kpi::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--kpi-accent, var(--data-cyan)); }
+  .kpi .label{ font-family:'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--paper-dim); margin-bottom: 9px; }
+  .kpi .value{ font-family:'JetBrains Mono', monospace; font-size: 27px; font-weight: 700; line-height: 1; color: var(--paper); font-variant-numeric: tabular-nums; }
+  .kpi .value small{ font-size: 14px; color: var(--paper-dim); font-weight: 400; }
+  .kpi .sub{ margin-top: 8px; font-size: 10.5px; color: var(--paper-dim); }
+  .kpi.warn{ --kpi-accent: var(--hi-vis); } .kpi.warn .value{ color: var(--hi-vis); }
+  .kpi.ok{ --kpi-accent: var(--status-green); } .kpi.ok .value{ color: var(--status-green); }
+
+  /* ===== Grids / panels ===== */
+  .maingrid{ display:grid; grid-template-columns: 1.35fr 1fr; gap: 16px; margin-bottom: 24px; align-items: start; }
+  .maingrid.even{ grid-template-columns: 1fr 1fr; }
+  .maingrid.thirds{ grid-template-columns: 1fr 1fr 1fr; }
+  .panel{ background: var(--bp-panel); border: 1px solid var(--bp-panel-line); border-radius: var(--radius); padding: 15px 17px 17px 17px; min-width: 0; }
+  .panel h2{ font-size: 12.5px; font-weight: 600; margin: 0 0 13px 0; display:flex; justify-content: space-between; align-items:center; gap: 8px; }
+  .panel h2 .tag{ font-family:'JetBrains Mono', monospace; font-size: 9px; color: var(--paper-dim); font-weight: 400; letter-spacing: 0.06em; border: 1px solid var(--bp-panel-line); padding: 2px 7px; border-radius: 2px; white-space: nowrap; }
+
+  table{ width:100%; border-collapse: collapse; }
+  .tablewrap{ overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  th{ font-family:'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--paper-dim); text-align: left; font-weight: 500; padding: 0 8px 9px 8px; border-bottom: 1px solid var(--bp-panel-line); white-space: nowrap; position: sticky; top: 0; background: var(--bp-panel); }
+  th.num, td.num{ text-align: right; }
+  td{ font-family:'JetBrains Mono', monospace; font-size: 11.5px; padding: 9px 8px; border-bottom: 1px solid var(--bp-line-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.pname{ font-family:'Space Grotesk', sans-serif; font-weight: 500; font-size: 12px; white-space: normal; }
+  tr:hover td{ background: rgba(127,196,220,0.05); }
+
+  .pill{ display:inline-block; font-family:'JetBrains Mono', monospace; font-size: 10px; padding: 2px 8px; border-radius: 10px; }
+  .pill.green{ background: var(--status-green-dim); color: var(--status-green); }
+  .pill.amber{ background: var(--status-amber-dim); color: var(--status-amber); }
+  .pill.orange{ background: var(--hi-vis-dim); color: var(--hi-vis); }
+  .pill.cyan{ background: var(--data-cyan-dim); color: var(--data-cyan); }
+  .pill.na{ background: rgba(122,168,201,0.1); color: var(--bp-line); }
+
+  .bar-row{ margin-bottom: 14px; } .bar-row:last-child{ margin-bottom: 2px; }
+  .bar-label{ display:flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 6px; gap: 8px; }
+  .bar-label .name{ min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-label .pct{ font-family:'JetBrains Mono', monospace; color: var(--data-cyan); font-variant-numeric: tabular-nums; flex-shrink:0; }
+  .bar-track{ height: 9px; background: var(--bp-navy-deep); border: 1px solid var(--bp-panel-line); border-radius: 5px; overflow: hidden; }
+  .bar-fill{ height: 100%; background: var(--data-cyan); }
+  .bar-fill.high{ background: var(--status-green); } .bar-fill.low{ background: var(--hi-vis); }
+
+  /* ===== Filter chips ===== */
+  .chiprow{ display:flex; align-items:center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .chiprow .slabel{ font-family:'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--paper-dim); margin-right: 4px; }
+  .chip{ font-family:'JetBrains Mono', monospace; font-size: 10.5px; padding: 6px 12px; border: 1px solid var(--bp-panel-line); border-radius: 14px; color: var(--paper-dim); background: none; cursor: pointer; }
+  .chip:hover{ border-color: var(--bp-line); color: var(--paper); }
+  .chip.on{ border-color: var(--data-cyan); color: var(--paper); background: var(--data-cyan-dim); }
+
+  /* ===== DCMA grid ===== */
+  .dcmagrid{ display:grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+  .dcma{ background: var(--bp-panel); border: 1px solid var(--bp-panel-line); border-radius: var(--radius); padding: 13px 15px; min-height: 92px; display:flex; flex-direction:column; justify-content:space-between; }
+  .dcma .num{ font-family:'JetBrains Mono', monospace; font-size: 9px; color: var(--bp-line); letter-spacing: 0.06em; }
+  .dcma .val{ font-family:'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dcma .val.small{ font-size: 11.5px; font-weight: 500; line-height: 1.35; font-family:'Space Grotesk',sans-serif; color: var(--paper-dim); }
+  .dcma .name{ font-size: 10.5px; color: var(--paper-dim); margin-top: 4px; }
+  .dcma.pass .val{ color: var(--status-green); }
+  .dcma.watch .val{ color: var(--status-amber); }
+  .dcma.na{ opacity: .55; }
+  .dcma.na .val{ color: var(--paper-dim); }
+  .legend-note{ font-size: 11px; color: var(--paper-dim); line-height: 1.6; padding: 11px 15px; border: 1px dashed var(--bp-panel-line); border-radius: var(--radius); margin-bottom: 24px; }
+
+  /* ===== Charts (SVG) ===== */
+  .chart-svg{ width: 100%; height: auto; display: block; }
+  .axis-line{ stroke: var(--bp-panel-line); stroke-width: 1; }
+  .grid-line{ stroke: var(--bp-line-faint); stroke-width: 1; }
+  .axis-label{ font-family:'JetBrains Mono', monospace; font-size: 9px; fill: var(--paper-dim); }
+  .series-planned{ stroke: var(--data-cyan); }
+  .series-actual{ stroke: var(--hi-vis); }
+  .chart-legend{ display:flex; gap: 16px; margin-bottom: 10px; font-size: 11px; }
+  .chart-legend .item{ display:flex; align-items:center; gap: 6px; color: var(--paper-dim); }
+  .chart-legend .swatch{ width: 10px; height: 10px; border-radius: 2px; }
+  .daterange{ display:flex; align-items:center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .daterange .slabel{ font-family:'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--paper-dim); }
+  .daterange select{ background: var(--bp-navy-deep); color: var(--paper); border: 1px solid var(--bp-panel-line); border-radius: var(--radius); padding: 5px 8px; font-size: 11px; cursor: pointer; }
+  .daterange select:focus-visible{ outline: 2px solid var(--data-cyan); }
+  .donut-legend{ display:flex; flex-direction:column; gap: 9px; margin-top: 14px; }
+  .donut-legend .row{ display:flex; align-items:center; gap: 8px; font-size: 11.5px; }
+  .donut-legend .swatch{ width: 10px; height: 10px; border-radius: 50%; flex-shrink:0; }
+  .donut-legend .amt{ margin-left:auto; font-family:'JetBrains Mono',monospace; font-variant-numeric: tabular-nums; color: var(--paper-dim); }
+
+  /* ===== Title block (footer) ===== */
+  .titleblock{ margin: 8px 32px 26px 32px; border: 1px solid var(--bp-line); display:grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; }
+  .tb-cell{ padding: 9px 13px; border-right: 1px solid var(--bp-panel-line); min-width: 0; }
+  .tb-cell:last-child{ border-right:none; }
+  .tb-cell .tb-label{ font-family:'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing:0.1em; text-transform:uppercase; color: var(--paper-dim); margin-bottom: 4px; }
+  .tb-cell .tb-value{ font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--paper); overflow: hidden; text-overflow: ellipsis; }
+
+  @media (max-width: 760px){
+    .kpirow, .kpirow.five{ grid-template-columns: repeat(2, 1fr); }
+    .maingrid, .maingrid.even, .maingrid.thirds{ grid-template-columns: 1fr; }
+    .dcmagrid{ grid-template-columns: repeat(2, 1fr); }
+    .titleblock{ grid-template-columns: 1fr 1fr; }
+    .titlestrip{ padding: 16px 18px 12px 18px; }
+    .titlestrip .datadate{ text-align: left; }
+    .navrow{ padding: 0 18px; }
+    section.content{ padding: 20px 18px 8px 18px; }
+    .titleblock{ margin: 8px 18px 22px 18px; }
+    .tb-cell:nth-child(4), .tb-cell:nth-child(5){ display:none; }
+  }
+  @media (max-width: 420px){
+    .kpirow, .kpirow.five{ grid-template-columns: 1fr 1fr; }
+    .kpi .value{ font-size: 23px; }
+    .titlestrip h1{ font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <div class="titlestrip">
+    <div>
+      <p class="eyebrow">Construction Planning Department — Egypt &amp; Gulf Portfolio</p>
+      <h1>Portfolio Overview</h1>
+    </div>
+    <div class="datadate">
+      DATA DATE&nbsp; <b>16&nbsp;AUG&nbsp;2026</b><br>
+      PROJECTS TRACKED&nbsp; <b>4</b>
+    </div>
+  </div>
+
+  <nav class="navbar">
+    <div class="navrow" id="navrow" role="tablist" aria-label="Report sections"></div>
+  </nav>
+
+  <main>
+    <section class="content" id="sec-overview">
+      <p class="sectionlabel">01 · Portfolio Overview</p>
+      <div class="chiprow" id="projectchips"><span class="slabel">Project</span></div>
+      <div class="kpirow" id="kpi-overview"></div>
+      <div class="maingrid">
+        <div class="panel">
+          <h2>Project Status Matrix <span class="tag">TABLE</span></h2>
+          <div class="tablewrap"><table id="matrix-table"></table></div>
+        </div>
+        <div class="panel">
+          <h2>% Complete by Project <span class="tag">BAR CHART</span></h2>
+          <div id="pct-bars"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content" id="sec-schedule">
+      <p class="sectionlabel">02 · Schedule Performance</p>
+      <div class="kpirow five" id="kpi-schedule"></div>
+      <div class="panel" style="margin-bottom:16px;">
+        <h2>Planned vs. Actual Completions <span class="tag">CUMULATIVE, PORTFOLIO-WIDE</span></h2>
+        <div class="chart-legend">
+          <span class="item"><span class="swatch" style="background:var(--data-cyan)"></span>Planned (by early finish)</span>
+          <span class="item"><span class="swatch" style="background:var(--hi-vis)"></span>Actual (completed)</span>
+        </div>
+        <div class="daterange" id="scurve-range">
+          <span class="slabel">Year</span>
+          <select class="mono" id="scurve-year"></select>
+          <span class="slabel">From</span>
+          <select class="mono" id="scurve-from"></select>
+          <span class="slabel">To</span>
+          <select class="mono" id="scurve-to"></select>
+        </div>
+        <div id="scurve-chart"></div>
+      </div>
+      <div class="maingrid even">
+        <div class="panel">
+          <h2>Critical vs Non-Critical <span class="tag">BY PROJECT</span></h2>
+          <div id="critical-bars"></div>
+        </div>
+        <div class="panel">
+          <h2>Milestone Log <span class="tag">11 TOTAL</span></h2>
+          <div class="tablewrap"><table id="milestone-table"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content" id="sec-dcma">
+      <p class="sectionlabel">03 · DCMA 14-Point Schedule Health <span class="hint">portfolio-wide assessment</span></p>
+      <div class="dcmagrid" id="dcma-grid"></div>
+      <div class="legend-note">Checks 5, 11, 13 &amp; 14 require constraint or baseline data not present in the current snapshot(s). They activate automatically once a second dated snapshot or constraint fields are dropped into the source folder.</div>
+    </section>
+
+    <section class="content" id="sec-cost">
+      <p class="sectionlabel">04 · Cost &amp; Resources <span class="hint">EGP, resource detail currently CairoHQ only</span></p>
+      <div class="kpirow" id="kpi-cost"></div>
+      <div class="maingrid thirds">
+        <div class="panel">
+          <h2>Budgeted vs Actual <span class="tag">BY TYPE</span></h2>
+          <div id="cost-bars"></div>
+        </div>
+        <div class="panel">
+          <h2>Cost Share <span class="tag">ACTUAL SPEND</span></h2>
+          <div id="cost-donut"></div>
+        </div>
+        <div class="panel">
+          <h2>Actual Cost <span class="tag">BY PROJECT</span></h2>
+          <div id="cost-by-project"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content" id="sec-resources">
+      <p class="sectionlabel">05 · Resource Utilization <span class="hint">actual vs. budgeted units — CairoHQ only</span></p>
+      <div class="kpirow" id="kpi-resources"></div>
+      <div class="maingrid even">
+        <div class="panel">
+          <h2>Utilization by Resource <span class="tag">ACTUAL / BUDGETED UNITS</span></h2>
+          <div id="resource-bars"></div>
+        </div>
+        <div class="panel">
+          <h2>Resource Detail <span class="tag">TABLE</span></h2>
+          <div class="tablewrap"><table id="resource-table"></table></div>
+        </div>
+      </div>
+      <div class="legend-note">Utilization = actual units consumed against each resource's budgeted (planned) allocation across all its assignments — a proxy for over/under-allocation. A true load-vs-capacity histogram (assigned hours against each trade's calendar peak) needs a resource calendar/capacity table not yet in the source data.</div>
+    </section>
+
+    <section class="content" id="sec-explorer">
+      <p class="sectionlabel">06 · Activity Explorer <span class="hint" id="explorer-count"></span></p>
+      <div class="chiprow" id="statuschips"><span class="slabel">Status</span></div>
+      <div class="panel" style="margin-bottom: 26px;">
+        <div class="tablewrap" style="max-height: 560px; overflow-y: auto;"><table id="explorer-table"></table></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="titleblock">
+    <div class="tb-cell"><div class="tb-label">Project</div><div class="tb-value">Planning Dept — Portfolio Dashboard</div></div>
+    <div class="tb-cell"><div class="tb-label">Sheet</div><div class="tb-value">01 OF 06</div></div>
+    <div class="tb-cell"><div class="tb-label">Data Date</div><div class="tb-value">16-AUG-2026</div></div>
+    <div class="tb-cell"><div class="tb-label">Source</div><div class="tb-value">XLSX · XER · XML</div></div>
+    <div class="tb-cell"><div class="tb-label">Status</div><div class="tb-value" style="color:var(--data-cyan)">SNAPSHOT — NOT LIVE</div></div>
+  </div>
+
+</div>
+
+<script>
+const PROJECTS = [
+  {name:"AlexTower", complete:6, inProgress:1, notStarted:1, critical:8, total:8, pctComplete:0.9876},
+  {name:"CairoHQ", complete:16, inProgress:1, notStarted:9, critical:23, total:26, pctComplete:0.6523},
+  {name:"SOKHNA-WH", complete:3, inProgress:1, notStarted:3, critical:7, total:7, pctComplete:0.5194},
+  {name:"New Cairo Villas - Cluster 3", complete:3, inProgress:1, notStarted:3, critical:7, total:7, pctComplete:0.4765},
+];
+
+const PORTFOLIO = {
+  projects:4, activities:48, weightedComplete:0.6772, criticalPct:0.9375, criticalCnt:45,
+  behindCount:0, milestonesTotal:11, milestonesRemaining:5, avgFloat:6.79, negFloatCnt:0,
+  onTime:0.5833, budgCost:19124200, actCost:19000091, costVar:-0.00649, distinctRes:9
+};
+
+const DCMA = [
+  {n:1, name:"Logic %", val:0.1667, fmt:"pct", threshold:"< 5%", status:"watch"},
+  {n:2, name:"Leads %", val:0, fmt:"pct", threshold:"0%", status:"pass"},
+  {n:3, name:"Lags %", val:0.0976, fmt:"pct", threshold:"< 5%", status:"watch"},
+  {n:4, name:"Non-FS Relationships %", val:0, fmt:"pct", threshold:"< 10%", status:"pass"},
+  {n:5, name:"Hard Constraints", val:"No constraint data in source files", fmt:"txt", status:"na"},
+  {n:6, name:"High Float %", val:0.0417, fmt:"pct", threshold:"< 5%", status:"pass"},
+  {n:7, name:"Negative Float %", val:0, fmt:"pct", threshold:"0%", status:"pass"},
+  {n:8, name:"High Duration %", val:0, fmt:"pct", threshold:"< 5%", status:"pass"},
+  {n:9, name:"Invalid Dates %", val:0.0833, fmt:"pct", threshold:"0%", status:"watch"},
+  {n:10, name:"Missing Resources %", val:0.5625, fmt:"pct", threshold:"< 5%", status:"watch"},
+  {n:11, name:"Missed Tasks (Baseline)", val:"Requires a baseline snapshot — not yet available", fmt:"txt", status:"na"},
+  {n:12, name:"Critical Path Breaks", val:3, fmt:"int", threshold:"0", status:"watch"},
+  {n:13, name:"CPLI", val:"Requires baseline project finish date — not yet available", fmt:"txt", status:"na"},
+  {n:14, name:"BEI", val:"Requires baseline execution data — not yet available", fmt:"txt", status:"na"},
+];
+
+const COST_BY_TYPE = [
+  {type:"Labor", budgeted:685600, actual:428471},
+  {type:"Nonlabor", budgeted:681600, actual:699260},
+  {type:"Material", budgeted:17757000, actual:17872360},
+];
+const COST_BY_PROJECT = [
+  {name:"AlexTower", actual:0},
+  {name:"CairoHQ", actual:19000091},
+  {name:"SOKHNA-WH", actual:0},
+  {name:"New Cairo Villas - Cluster 3", actual:0},
+];
+const SCURVE = [
+  {y:2026, m:"Feb", planned:3, actual:3}, {y:2026, m:"Mar", planned:6, actual:6}, {y:2026, m:"Apr", planned:9, actual:9},
+  {y:2026, m:"May", planned:13, actual:13}, {y:2026, m:"Jun", planned:20, actual:20}, {y:2026, m:"Jul", planned:27, actual:27},
+  {y:2026, m:"Aug", planned:33, actual:28}, {y:2026, m:"Sep", planned:36, actual:28}, {y:2026, m:"Oct", planned:42, actual:28},
+  {y:2026, m:"Nov", planned:46, actual:28}, {y:2026, m:"Dec", planned:48, actual:28},
+];
+
+const MILESTONES = [
+  {project:"AlexTower", name:"Notice to Proceed", status:"Complete", date:"2026-03-01"},
+  {project:"AlexTower", name:"Practical Completion / Handover", status:"Not Started", date:"2026-08-18"},
+  {project:"CairoHQ", name:"Notice to Proceed", status:"Complete", date:"2026-02-01"},
+  {project:"CairoHQ", name:"Substructure Complete", status:"Complete", date:"2026-05-12"},
+  {project:"CairoHQ", name:"Structure Topping Out", status:"Complete", date:"2026-07-20"},
+  {project:"CairoHQ", name:"Finishes Complete", status:"Not Started", date:"2026-11-18"},
+  {project:"CairoHQ", name:"Practical Completion / Handover", status:"Not Started", date:"2026-12-03"},
+  {project:"New Cairo Villas - Cluster 3", name:"Notice to Proceed", status:"Complete", date:"2026-06-14"},
+  {project:"New Cairo Villas - Cluster 3", name:"Practical Completion / Handover", status:"Not Started", date:"2026-10-24"},
+  {project:"SOKHNA-WH", name:"Notice to Proceed", status:"Complete", date:"2026-06-21"},
+  {project:"SOKHNA-WH", name:"Practical Completion / Handover", status:"Not Started", date:"2026-10-07"},
+];
+
+const RESOURCES = [
+  {name:"Site Engineer", type:"Labor", budgetedUnits:256, actualUnits:135.6, budgetedCost:38400, actualCost:20340},
+  {name:"Skilled Labor - Civil", type:"Labor", budgetedUnits:4820, actualUnits:3394.7, budgetedCost:433800, actualCost:305523},
+  {name:"Skilled Labor - MEP", type:"Labor", budgetedUnits:1940, actualUnits:932.8, budgetedCost:213400, actualCost:102608},
+  {name:"Formwork System", type:"Material", budgetedUnits:180, actualUnits:0, budgetedCost:63000, actualCost:0},
+  {name:"Ready-Mix Concrete", type:"Material", budgetedUnits:2520, actualUnits:2498.8, budgetedCost:5544000, actualCost:5497360},
+  {name:"Reinforcement Steel", type:"Material", budgetedUnits:270, actualUnits:275, budgetedCost:12150000, actualCost:12375000},
+  {name:"Concrete Pump", type:"Nonlabor", budgetedUnits:null, actualUnits:null, budgetedCost:null, actualCost:null},
+  {name:"Excavator", type:"Nonlabor", budgetedUnits:160, actualUnits:155, budgetedCost:80000, actualCost:77500},
+  {name:"Tower Crane", type:"Nonlabor", budgetedUnits:752, actualUnits:777.2, budgetedCost:601600, actualCost:621760},
+];
+
+const ACTIVITIES = [
+  {project:"AlexTower", wbs:"ALEXTWR-WBS01", code:"MS200", name:"Notice to Proceed", type:"Milestone", status:"Complete", pct:100, start:"2026-03-01", finish:"2026-03-01", float:0, critical:"Y"},
+  {project:"AlexTower", wbs:"ALEXTWR-WBS01", code:"B1010", name:"Excavation & Piling", type:"Task", status:"Complete", pct:100, start:"2026-03-01", finish:"2026-03-26", float:0, critical:"Y"},
+  {project:"AlexTower", wbs:"ALEXTWR-WBS01", code:"B1020", name:"Foundation & Raft", type:"Task", status:"Complete", pct:100, start:"2026-03-26", finish:"2026-04-15", float:0, critical:"Y"},
+  {project:"AlexTower", wbs:"ALEXTWR-WBS01", code:"B1030", name:"Ground Floor Structure", type:"Task", status:"Complete", pct:100, start:"2026-04-15", finish:"2026-05-05", float:0, critical:"Y"},
+  {project:"AlexTower", wbs:"ALEXTWR-WBS01", code:"B1040", name:"Typical Floor Structure (1F-5F)", type:"Task", status:"Complete", pct:100, start:"2026-05-05", finish:"2026-06-14", float:0, critical:"Y"},
+  {project:"AlexTower", wbs:"ALEXTWR-WBS01", code:"B1050", name:"MEP Rough-in", type:"Task", status:"Complete", pct:100, start:"2026-06-14", finish:"2026-07-14", float:0, critical:"Y"},
+  {project:"AlexTower", wbs:"ALEXTWR-WBS01", code:"B1060", name:"Finishes", type:"Task", status:"In Progress", pct:94, start:"2026-07-14", finish:null, float:0, critical:"Y"},
+  {project:"AlexTower", wbs:"ALEXTWR-WBS01", code:"MS210", name:"Practical Completion / Handover", type:"Milestone", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Preliminaries & Mobilization", code:"MS100", name:"Notice to Proceed", type:"Milestone", status:"Complete", pct:100, start:"2026-02-01", finish:"2026-02-01", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Preliminaries & Mobilization", code:"A1010", name:"Mobilize Site & Setup Facilities", type:"Task", status:"Complete", pct:100, start:"2026-02-01", finish:"2026-02-11", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Preliminaries & Mobilization", code:"A1020", name:"Site Survey & Setting Out", type:"Task", status:"Complete", pct:100, start:"2026-02-11", finish:"2026-02-18", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Substructure", code:"A1030", name:"Excavation & Earthworks", type:"Task", status:"Complete", pct:100, start:"2026-02-18", finish:"2026-03-10", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Substructure", code:"A1040", name:"Piling Works", type:"Task", status:"Complete", pct:100, start:"2026-03-10", finish:"2026-04-04", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Substructure", code:"A1050", name:"Pile Caps & Foundations", type:"Task", status:"Complete", pct:100, start:"2026-04-04", finish:"2026-04-22", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Substructure", code:"A1060", name:"Basement Retaining Walls", type:"Task", status:"Complete", pct:100, start:"2026-04-22", finish:"2026-05-12", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Substructure", code:"MS110", name:"Substructure Complete", type:"Milestone", status:"Complete", pct:100, start:"2026-05-12", finish:"2026-05-12", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Superstructure", code:"A1070", name:"Ground Floor Columns & Slab", type:"Task", status:"Complete", pct:100, start:"2026-05-12", finish:"2026-05-30", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Superstructure", code:"A1080", name:"1st Floor Columns & Slab", type:"Task", status:"Complete", pct:100, start:"2026-05-30", finish:"2026-06-17", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Superstructure", code:"A1090", name:"2nd Floor Columns & Slab", type:"Task", status:"Complete", pct:100, start:"2026-06-17", finish:"2026-07-05", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Superstructure", code:"A1100", name:"Roof Slab & Structure", type:"Task", status:"Complete", pct:100, start:"2026-07-05", finish:"2026-07-20", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Superstructure", code:"MS120", name:"Structure Topping Out", type:"Milestone", status:"Complete", pct:100, start:"2026-07-20", finish:"2026-07-20", float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"MEP Installation", code:"A1110", name:"Electrical First Fix", type:"Task", status:"In Progress", pct:96, start:"2026-07-23", finish:null, float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"MEP Installation", code:"A1120", name:"Plumbing First Fix", type:"Task", status:"Complete", pct:100, start:"2026-07-23", finish:"2026-08-14", float:3, critical:"N"},
+  {project:"CairoHQ", wbs:"MEP Installation", code:"A1130", name:"HVAC Ductwork Installation", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"MEP Installation", code:"A1140", name:"MEP Second Fix", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Finishes", code:"A1150", name:"Blockwork & Partitions", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Finishes", code:"A1160", name:"Plastering & Screeding", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Finishes", code:"A1170", name:"Flooring & Tiling", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Finishes", code:"A1180", name:"Painting & Decoration", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"Finishes", code:"MS130", name:"Finishes Complete", type:"Milestone", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"External Works & Handover", code:"A1190", name:"External Landscaping", type:"Task", status:"Complete", pct:100, start:"2026-06-11", finish:"2026-06-26", float:160, critical:"N"},
+  {project:"CairoHQ", wbs:"External Works & Handover", code:"A1200", name:"Site Boundary Wall", type:"Task", status:"Complete", pct:100, start:"2026-06-11", finish:"2026-06-23", float:163, critical:"N"},
+  {project:"CairoHQ", wbs:"External Works & Handover", code:"A1210", name:"Testing & Commissioning", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"CairoHQ", wbs:"External Works & Handover", code:"MS140", name:"Practical Completion / Handover", type:"Milestone", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"New Cairo Villas - Cluster 3", wbs:"Villas Cluster 3", code:"MS400", name:"Notice to Proceed", type:"Milestone", status:"Complete", pct:100, start:"2026-06-14", finish:"2026-06-14", float:0, critical:"Y"},
+  {project:"New Cairo Villas - Cluster 3", wbs:"Villas Cluster 3", code:"D1010", name:"Earthworks & Shoring", type:"Task", status:"Complete", pct:100, start:"2026-06-14", finish:"2026-06-26", float:0, critical:"Y"},
+  {project:"New Cairo Villas - Cluster 3", wbs:"Villas Cluster 3", code:"D1020", name:"Substructure (Villas 1-6)", type:"Task", status:"Complete", pct:100, start:"2026-06-26", finish:"2026-07-21", float:0, critical:"Y"},
+  {project:"New Cairo Villas - Cluster 3", wbs:"Villas Cluster 3", code:"D1030", name:"Superstructure (Villas 1-6)", type:"Task", status:"In Progress", pct:74, start:"2026-07-21", finish:null, float:0, critical:"Y"},
+  {project:"New Cairo Villas - Cluster 3", wbs:"Villas Cluster 3", code:"D1040", name:"MEP & Finishes", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"New Cairo Villas - Cluster 3", wbs:"Villas Cluster 3", code:"D1050", name:"External Works & Landscaping", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"New Cairo Villas - Cluster 3", wbs:"Villas Cluster 3", code:"MS410", name:"Practical Completion / Handover", type:"Milestone", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"SOKHNA-WH", wbs:"Sokhna Logistics Warehouse", code:"MS300", name:"Notice to Proceed", type:"Milestone", status:"Complete", pct:100, start:"2026-06-21", finish:"2026-06-21", float:0, critical:"Y"},
+  {project:"SOKHNA-WH", wbs:"Sokhna Logistics Warehouse", code:"C1010", name:"Site Clearance & Grading", type:"Task", status:"Complete", pct:100, start:"2026-06-21", finish:"2026-07-06", float:0, critical:"Y"},
+  {project:"SOKHNA-WH", wbs:"Sokhna Logistics Warehouse", code:"C1020", name:"Steel Foundations", type:"Task", status:"Complete", pct:100, start:"2026-07-06", finish:"2026-07-24", float:0, critical:"Y"},
+  {project:"SOKHNA-WH", wbs:"Sokhna Logistics Warehouse", code:"C1030", name:"Steel Structure Erection", type:"Task", status:"In Progress", pct:77, start:"2026-07-24", finish:null, float:0, critical:"Y"},
+  {project:"SOKHNA-WH", wbs:"Sokhna Logistics Warehouse", code:"C1040", name:"Metal Cladding & Roofing", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"SOKHNA-WH", wbs:"Sokhna Logistics Warehouse", code:"C1050", name:"MEP & Fire Systems", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+  {project:"SOKHNA-WH", wbs:"Sokhna Logistics Warehouse", code:"MS310", name:"Practical Completion / Handover", type:"Task", status:"Not Started", pct:0, start:null, finish:null, float:0, critical:"Y"},
+];
+
+const SECTIONS = [
+  {id:"sec-overview", label:"01 · Portfolio Overview"},
+  {id:"sec-schedule", label:"02 · Schedule Performance"},
+  {id:"sec-dcma", label:"03 · Schedule Health"},
+  {id:"sec-cost", label:"04 · Cost & Resources"},
+  {id:"sec-resources", label:"05 · Resource Utilization"},
+  {id:"sec-explorer", label:"06 · Activity Explorer"},
+];
+const CAT_COLORS = ["#7FC4DC", "#3E6E90", "#A9BAC7", "#D8AC52"];
+
+const fmtPct = v => (v*100).toFixed(1) + "%";
+const fmtMoney = v => "EGP " + Math.round(v).toLocaleString("en-US");
+const fmtDate = s => s ? new Date(s + "T00:00:00").toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"}).toUpperCase() : "—";
+const statusPill = s => `<span class="pill ${s==="Complete"?"green":s==="In Progress"?"cyan":"amber"}">${s}</span>`;
+const pctPill = pct => `<span class="pill ${pct>=0.85?"green":pct>=0.6?"amber":"orange"}">${(pct*100).toFixed(0)}%</span>`;
+const resUtil = r => (r.budgetedUnits==null || r.budgetedUnits===0) ? null : r.actualUnits / r.budgetedUnits;
+const utilPill = u => u===null ? '<span class="pill na">N/A</span>' : `<span class="pill ${u>1?'orange':u>=0.7?'green':'amber'}">${(u*100).toFixed(0)}%</span>`;
+
+let activeProject = "All";
+let activeStatus = "All";
+let activeTab = "sec-overview";
+
+function el(html){ const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
+
+function renderNav(){
+  const nav = document.getElementById("navrow");
+  nav.innerHTML = "";
+  SECTIONS.forEach(s => {
+    const btn = el(`<button type="button" class="navtab ${s.id===activeTab?'active':''}" id="nav-${s.id}" role="tab" aria-selected="${s.id===activeTab}">${s.label}</button>`);
+    // Guard against the tab strip's own drag-to-scroll being misread as a tap:
+    // only switch tabs if the pointer didn't move more than a few pixels between down and up.
+    let downX = 0, downY = 0, dragged = false;
+    btn.addEventListener("pointerdown", e => { downX = e.clientX; downY = e.clientY; dragged = false; });
+    btn.addEventListener("pointermove", e => {
+      if (Math.abs(e.clientX - downX) > 6 || Math.abs(e.clientY - downY) > 6) dragged = true;
+    });
+    btn.addEventListener("click", () => { if (!dragged) switchTab(s.id); });
+    nav.appendChild(btn);
+  });
+}
+function switchTab(id){
+  activeTab = id;
+  document.querySelectorAll("section.content").forEach(s => s.classList.toggle("active", s.id===id));
+  document.querySelectorAll(".navtab").forEach(t => t.classList.toggle("active", t.id === "nav-"+id));
+  window.scrollTo({top:0, behavior:"instant"});
+}
+
+function renderOverviewKpis(){
+  const scope = activeProject === "All" ? "Portfolio-wide" : activeProject;
+  let activities, projectsCount, weightedComplete, criticalCnt, criticalPct, msTotal, msDone;
+
+  if (activeProject === "All") {
+    activities = PORTFOLIO.activities;
+    projectsCount = PORTFOLIO.projects;
+    weightedComplete = PORTFOLIO.weightedComplete;
+    criticalCnt = PORTFOLIO.criticalCnt;
+    criticalPct = PORTFOLIO.criticalPct;
+    msTotal = PORTFOLIO.milestonesTotal;
+    msDone = PORTFOLIO.milestonesTotal - PORTFOLIO.milestonesRemaining;
+  } else {
+    const p = PROJECTS.find(p => p.name === activeProject);
+    activities = p.total;
+    projectsCount = 1;
+    weightedComplete = p.pctComplete;
+    criticalCnt = p.critical;
+    criticalPct = p.critical / p.total;
+    const ms = MILESTONES.filter(m => m.project === activeProject);
+    msTotal = ms.length;
+    msDone = ms.filter(m => m.status === "Complete").length;
+  }
+
+  document.getElementById("kpi-overview").innerHTML = `
+    <div class="kpi"><div class="label">Activities Tracked</div><div class="value">${activities}</div><div class="sub">${scope}${activeProject==="All" ? `, across ${projectsCount} projects` : ""}</div></div>
+    <div class="kpi ok"><div class="label">Weighted % Complete</div><div class="value">${(weightedComplete*100).toFixed(0)}<small>%</small></div><div class="sub">Duration-weighted, ${scope.toLowerCase()}</div></div>
+    <div class="kpi warn"><div class="label">% Critical Activities</div><div class="value">${(criticalPct*100).toFixed(0)}<small>%</small></div><div class="sub">${criticalCnt} of ${activities} — tight networks</div></div>
+    <div class="kpi"><div class="label">Milestones Achieved</div><div class="value">${msDone}<small>/${msTotal}</small></div><div class="sub">${msTotal ? Math.round(msDone/msTotal*100) : 0}% hit to date${activeProject==="All"?"":" for "+scope}</div></div>
+  `;
+}
+
+function renderChips(){
+  const pwrap = document.getElementById("projectchips");
+  ["All", ...PROJECTS.map(p=>p.name)].forEach(n => {
+    const chip = el(`<button class="chip ${n===activeProject?'on':''}">${n}</button>`);
+    chip.addEventListener("click", () => { activeProject = n; render(); });
+    pwrap.appendChild(chip);
+  });
+  const swrap = document.getElementById("statuschips");
+  ["All", "Complete", "In Progress", "Not Started"].forEach(s => {
+    const chip = el(`<button class="chip ${s===activeStatus?'on':''}">${s}</button>`);
+    chip.addEventListener("click", () => { activeStatus = s; render(); });
+    swrap.appendChild(chip);
+  });
+}
+
+function renderMatrix(){
+  const rows = PROJECTS.filter(p => activeProject==="All" || p.name===activeProject).map(p => `
+    <tr><td class="pname">${p.name}</td><td class="num">${p.complete}</td><td class="num">${p.inProgress}</td><td class="num">${p.notStarted}</td><td class="num">${p.critical} / ${p.total}</td><td class="num">${pctPill(p.pctComplete)}</td></tr>`).join("");
+  document.getElementById("matrix-table").innerHTML = `<thead><tr><th>Project</th><th class="num">Complete</th><th class="num">In Prog.</th><th class="num">Not Started</th><th class="num">Critical</th><th class="num">% Complete</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+function renderPctBars(){
+  const sorted = [...PROJECTS].sort((a,b)=>b.pctComplete-a.pctComplete);
+  document.getElementById("pct-bars").innerHTML = sorted.map(p => {
+    const cls = p.pctComplete >= 0.85 ? "high" : p.pctComplete < 0.55 ? "low" : "";
+    const dim = activeProject!=="All" && activeProject!==p.name ? "style='opacity:.35'" : "";
+    return `<div class="bar-row" ${dim}><div class="bar-label"><span class="name">${p.name}</span><span class="pct">${(p.pctComplete*100).toFixed(0)}%</span></div><div class="bar-track"><div class="bar-fill ${cls}" style="width:${(p.pctComplete*100).toFixed(0)}%"></div></div></div>`;
+  }).join("");
+}
+
+function renderScheduleKpis(){
+  document.getElementById("kpi-schedule").innerHTML = `
+    <div class="kpi warn"><div class="label">Critical Activities</div><div class="value">${PORTFOLIO.criticalCnt}</div><div class="sub">of ${PORTFOLIO.activities} total</div></div>
+    <div class="kpi"><div class="label">Avg Total Float</div><div class="value">${PORTFOLIO.avgFloat.toFixed(1)}<small>d</small></div><div class="sub">Portfolio average</div></div>
+    <div class="kpi ok"><div class="label">Negative Float</div><div class="value">${PORTFOLIO.negFloatCnt}</div><div class="sub">Activities behind logic</div></div>
+    <div class="kpi ok"><div class="label">On-Time %</div><div class="value">${(PORTFOLIO.onTime*100).toFixed(0)}<small>%</small></div><div class="sub">Completed with float ≥ 0</div></div>
+    <div class="kpi"><div class="label">Milestones Remaining</div><div class="value">${PORTFOLIO.milestonesRemaining}</div><div class="sub">of ${PORTFOLIO.milestonesTotal} total</div></div>
+  `;
+}
+
+function renderCriticalBars(){
+  document.getElementById("critical-bars").innerHTML = PROJECTS.map(p => {
+    const pct = p.critical / p.total;
+    const dim = activeProject!=="All" && activeProject!==p.name ? "style='opacity:.35'" : "";
+    return `<div class="bar-row" ${dim}><div class="bar-label"><span class="name">${p.name}</span><span class="pct">${p.critical} / ${p.total}</span></div><div class="bar-track"><div class="bar-fill low" style="width:${(pct*100).toFixed(0)}%"></div></div></div>`;
+  }).join("");
+}
+
+function renderMilestones(){
+  const filtered = MILESTONES.filter(m => activeProject==="All" || m.project===activeProject);
+  const rows = filtered.map(m => `<tr><td class="pname">${m.name}</td><td>${m.project}</td><td>${statusPill(m.status)}</td><td>${fmtDate(m.date)}</td></tr>`).join("");
+  document.getElementById("milestone-table").innerHTML = `<thead><tr><th>Milestone</th><th>Project</th><th>Status</th><th>Date</th></tr></thead><tbody>${rows || '<tr><td colspan="4" style="color:var(--paper-dim)">No milestones for this project.</td></tr>'}</tbody>`;
+}
+
+function dcmaCard(d){
+  let valHtml = d.fmt==="pct" ? fmtPct(d.val) : d.fmt==="int" ? d.val : `<span class="val small">${d.val}</span>`;
+  return `<div class="dcma ${d.status}"><div><div class="num">DCMA ${String(d.n).padStart(2,"0")}</div></div><div>${d.fmt==="txt" ? valHtml : `<div class="val">${valHtml}</div>`}<div class="name">${d.name}${d.threshold ? ` · target ${d.threshold}` : ""}</div></div></div>`;
+}
+function renderDcma(){ document.getElementById("dcma-grid").innerHTML = DCMA.map(dcmaCard).join(""); }
+
+function renderCostKpis(){
+  document.getElementById("kpi-cost").innerHTML = `
+    <div class="kpi"><div class="label">Total Budgeted</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.budgCost)}</div></div>
+    <div class="kpi"><div class="label">Total Actual</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.actCost)}</div></div>
+    <div class="kpi ${PORTFOLIO.costVar<0?'ok':'warn'}"><div class="label">Cost Variance</div><div class="value">${(PORTFOLIO.costVar*100).toFixed(1)}<small>%</small></div><div class="sub">${PORTFOLIO.costVar<0?"Under budget":"Over budget"}</div></div>
+    <div class="kpi"><div class="label">Distinct Resources</div><div class="value">${PORTFOLIO.distinctRes}</div><div class="sub">Tracked, CairoHQ</div></div>
+  `;
+}
+function renderCostBars(){
+  const max = Math.max(...COST_BY_TYPE.map(c=>Math.max(c.budgeted,c.actual)));
+  document.getElementById("cost-bars").innerHTML = COST_BY_TYPE.map(c => `
+    <div class="bar-row"><div class="bar-label"><span class="name">${c.type} · Budg.</span><span class="pct">${fmtMoney(c.budgeted)}</span></div><div class="bar-track"><div class="bar-fill" style="width:${(c.budgeted/max*100).toFixed(1)}%"></div></div></div>
+    <div class="bar-row"><div class="bar-label"><span class="name">${c.type} · Actual</span><span class="pct">${fmtMoney(c.actual)}</span></div><div class="bar-track"><div class="bar-fill ${c.actual>c.budgeted?'low':'high'}" style="width:${(c.actual/max*100).toFixed(1)}%"></div></div></div>
+  `).join("");
+}
+function renderCostByProject(){
+  const max = Math.max(...COST_BY_PROJECT.map(c=>c.actual), 1);
+  document.getElementById("cost-by-project").innerHTML = COST_BY_PROJECT.map(c => `
+    <div class="bar-row"><div class="bar-label"><span class="name">${c.name}</span><span class="pct">${c.actual ? fmtMoney(c.actual) : "no data"}</span></div><div class="bar-track"><div class="bar-fill" style="width:${(c.actual/max*100).toFixed(1)}%"></div></div></div>
+  `).join("");
+}
+
+function renderDonut(){
+  const total = COST_BY_TYPE.reduce((s,c)=>s+c.actual,0);
+  const r = 46, cx = 60, cy = 60, circ = 2*Math.PI*r;
+  let offset = 0;
+  const segs = COST_BY_TYPE.map((c,i) => {
+    const frac = c.actual/total;
+    const dash = frac*circ;
+    const seg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${CAT_COLORS[i]}" stroke-width="16" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    offset += dash;
+    return seg;
+  }).join("");
+  const svg = `<svg class="chart-svg" viewBox="0 0 120 120" style="max-width:180px;margin:0 auto;display:block;">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bp-navy-deep)" stroke-width="16"/>
+    ${segs}
+    <text x="${cx}" y="${cy-2}" text-anchor="middle" class="mono" font-size="11" fill="var(--paper)">${(total/1e6).toFixed(1)}M</text>
+    <text x="${cx}" y="${cy+11}" text-anchor="middle" class="mono" font-size="7" fill="var(--paper-dim)">EGP ACTUAL</text>
+  </svg>`;
+  const legend = COST_BY_TYPE.map((c,i) => `<div class="row"><span class="swatch" style="background:${CAT_COLORS[i]}"></span><span>${c.type}</span><span class="amt">${(c.actual/total*100).toFixed(0)}%</span></div>`).join("");
+  document.getElementById("cost-donut").innerHTML = svg + `<div class="donut-legend">${legend}</div>`;
+}
+
+function renderResourceKpis(){
+  const withData = RESOURCES.filter(r => resUtil(r)!==null);
+  const avgUtil = withData.reduce((s,r)=>s+resUtil(r),0) / withData.length;
+  const over = withData.filter(r => resUtil(r) > 1).length;
+  const under = withData.filter(r => resUtil(r) < 0.6).length;
+  document.getElementById("kpi-resources").innerHTML = `
+    <div class="kpi"><div class="label">Resources Tracked</div><div class="value">${RESOURCES.length}</div><div class="sub">CairoHQ assignments</div></div>
+    <div class="kpi"><div class="label">Avg Utilization</div><div class="value">${(avgUtil*100).toFixed(0)}<small>%</small></div><div class="sub">Actual vs. budgeted units</div></div>
+    <div class="kpi warn"><div class="label">Over-Allocated</div><div class="value">${over}</div><div class="sub">Actual exceeds budgeted units</div></div>
+    <div class="kpi ${under?'warn':'ok'}"><div class="label">Under-Utilized</div><div class="value">${under}</div><div class="sub">Below 60% of budgeted units</div></div>
+  `;
+}
+function renderResourceBars(){
+  document.getElementById("resource-bars").innerHTML = RESOURCES.map(r => {
+    const u = resUtil(r);
+    const pctLabel = u===null ? "no data" : (u*100).toFixed(0)+"%";
+    const widthPct = u===null ? 0 : Math.min(u*100, 100);
+    const cls = u===null ? "" : u>1 ? "low" : u>=0.7 ? "high" : "";
+    return `<div class="bar-row"><div class="bar-label"><span class="name">${r.name} <span style="color:var(--bp-line)">· ${r.type}</span></span><span class="pct">${pctLabel}</span></div><div class="bar-track"><div class="bar-fill ${cls}" style="width:${widthPct.toFixed(0)}%"></div></div></div>`;
+  }).join("");
+}
+function renderResourceTable(){
+  const rows = RESOURCES.map(r => {
+    const u = resUtil(r);
+    return `<tr><td class="pname">${r.name}</td><td>${r.type}</td><td class="num">${r.budgetedUnits ?? "—"}</td><td class="num">${r.actualUnits ?? "—"}</td><td class="num">${utilPill(u)}</td><td class="num">${r.budgetedCost!=null?fmtMoney(r.budgetedCost):"—"}</td><td class="num">${r.actualCost!=null?fmtMoney(r.actualCost):"—"}</td></tr>`;
+  }).join("");
+  document.getElementById("resource-table").innerHTML = `<thead><tr><th>Resource</th><th>Type</th><th class="num">Budg. Units</th><th class="num">Actual Units</th><th class="num">Utilization</th><th class="num">Budgeted Cost</th><th class="num">Actual Cost</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+let scurveYear = null, scurveFrom = 0, scurveTo = 0;
+
+function setupScurveControls(){
+  const years = [...new Set(SCURVE.map(d => d.y))];
+  scurveYear = years[0];
+  const yearSel = document.getElementById("scurve-year");
+  yearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join("");
+  yearSel.addEventListener("change", () => {
+    scurveYear = Number(yearSel.value);
+    const months = SCURVE.filter(d => d.y === scurveYear);
+    scurveFrom = 0; scurveTo = months.length - 1;
+    populateMonthSelects(months);
+    renderScurve();
+  });
+
+  const months = SCURVE.filter(d => d.y === scurveYear);
+  scurveFrom = 0; scurveTo = months.length - 1;
+  populateMonthSelects(months);
+
+  document.getElementById("scurve-from").addEventListener("change", e => {
+    scurveFrom = Number(e.target.value);
+    if (scurveFrom > scurveTo) scurveTo = scurveFrom;
+    document.getElementById("scurve-to").value = scurveTo;
+    renderScurve();
+  });
+  document.getElementById("scurve-to").addEventListener("change", e => {
+    scurveTo = Number(e.target.value);
+    if (scurveTo < scurveFrom) scurveFrom = scurveTo;
+    document.getElementById("scurve-from").value = scurveFrom;
+    renderScurve();
+  });
+}
+function populateMonthSelects(months){
+  const opts = months.map((d,i) => `<option value="${i}">${d.m}</option>`).join("");
+  document.getElementById("scurve-from").innerHTML = opts;
+  document.getElementById("scurve-to").innerHTML = opts;
+  document.getElementById("scurve-from").value = scurveFrom;
+  document.getElementById("scurve-to").value = scurveTo;
+}
+
+function renderScurve(){
+  const data = SCURVE.filter(d => d.y === scurveYear).slice(scurveFrom, scurveTo + 1);
+  const w = 900, h = 240, padL = 34, padR = 14, padT = 14, padB = 26;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const maxY = Math.max(10, Math.ceil(Math.max(...data.map(d => Math.max(d.planned, d.actual))) / 10) * 10);
+  const n = data.length;
+  const x = i => n <= 1 ? padL : padL + (i/(n-1))*plotW;
+  const y = v => padT + plotH - (v/maxY)*plotH;
+  const pathFor = key => data.map((d,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(" ");
+  const step = maxY / 5;
+  const gridVals = [0,1,2,3,4,5].map(k => Math.round(step*k));
+  const gridLines = gridVals.map(v => `<line class="grid-line" x1="${padL}" x2="${w-padR}" y1="${y(v)}" y2="${y(v)}"/><text class="axis-label" x="${padL-6}" y="${y(v)+3}" text-anchor="end">${v}</text>`).join("");
+  const xLabels = data.map((d,i) => `<text class="axis-label" x="${x(i)}" y="${h-8}" text-anchor="middle">${d.m}</text>`).join("");
+  if (!n) { document.getElementById("scurve-chart").innerHTML = `<p style="color:var(--paper-dim);font-size:12px;">No data in this range.</p>`; return; }
+  const lastP = data[n-1], lastI = n-1;
+  const svg = `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
+    ${gridLines}
+    <line class="axis-line" x1="${padL}" x2="${w-padR}" y1="${padT+plotH}" y2="${padT+plotH}"/>
+    <path d="${pathFor('planned')}" fill="none" class="series-planned" stroke-width="2"/>
+    <path d="${pathFor('actual')}" fill="none" class="series-actual" stroke-width="2"/>
+    <circle cx="${x(lastI)}" cy="${y(lastP.planned)}" r="3.5" fill="var(--data-cyan)"/>
+    <circle cx="${x(lastI)}" cy="${y(lastP.actual)}" r="3.5" fill="var(--hi-vis)"/>
+    <text class="axis-label mono" x="${x(lastI)-6}" y="${y(lastP.planned)-8}" text-anchor="end" fill="var(--data-cyan)">${lastP.planned}</text>
+    <text class="axis-label mono" x="${x(lastI)-6}" y="${y(lastP.actual)+14}" text-anchor="end" fill="var(--hi-vis)">${lastP.actual}</text>
+    ${xLabels}
+  </svg>`;
+  document.getElementById("scurve-chart").innerHTML = svg;
+}
+
+function renderExplorer(){
+  const filtered = ACTIVITIES.filter(a => (activeProject==="All" || a.project===activeProject) && (activeStatus==="All" || a.status===activeStatus));
+  document.getElementById("explorer-count").textContent = `${filtered.length} of ${ACTIVITIES.length} activities`;
+  const rows = filtered.map(a => `
+    <tr><td class="pname">${a.name}</td><td>${a.project}</td><td>${a.wbs}</td><td class="mono">${a.code}</td><td>${a.type}</td><td>${statusPill(a.status)}</td><td class="num">${a.pct}%</td><td>${fmtDate(a.start)}</td><td>${fmtDate(a.finish)}</td><td class="num">${a.float}</td><td class="num">${a.critical==="Y" ? '<span class="pill orange">Y</span>' : '<span class="pill na">N</span>'}</td></tr>`).join("");
+  document.getElementById("explorer-table").innerHTML = `<thead><tr><th>Activity</th><th>Project</th><th>WBS</th><th>Code</th><th>Type</th><th>Status</th><th class="num">% Comp.</th><th>Start</th><th>Finish</th><th class="num">Float</th><th class="num">Crit.</th></tr></thead><tbody>${rows || '<tr><td colspan="11" style="color:var(--paper-dim)">No activities match this filter.</td></tr>'}</tbody>`;
+}
+
+function render(){
+  document.querySelectorAll("#projectchips .chip").forEach(c => c.classList.toggle("on", c.textContent===activeProject));
+  document.querySelectorAll("#statuschips .chip").forEach(c => c.classList.toggle("on", c.textContent===activeStatus));
+  renderOverviewKpis(); renderMatrix(); renderPctBars(); renderCriticalBars(); renderMilestones(); renderExplorer();
+}
+
+renderNav();
+renderChips();
+renderScheduleKpis();
+setupScurveControls();
+renderScurve();
+renderDcma();
+renderCostKpis();
+renderCostBars();
+renderCostByProject();
+renderDonut();
+renderResourceKpis();
+renderResourceBars();
+renderResourceTable();
+render();
+switchTab("sec-overview");
+</script>
+
+</body>
+</html>
