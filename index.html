@@ -127,8 +127,14 @@
   .theme-toggle-btn:hover{ border-color: var(--data-cyan); }
 
   .navbar{ position: sticky; top: 0; z-index: 40; background: var(--bp-navy-deep); border-bottom: 1px solid var(--bp-line); }
-  .navrow{ display:flex; gap: 2px; padding: 0 32px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .navbar::before, .navbar::after{ content:''; position:absolute; top:0; bottom:0; width:22px; pointer-events:none; z-index:2; }
+  .navbar::before{ left:0; background:linear-gradient(90deg, var(--bp-navy-deep), transparent); }
+  .navbar::after{ right:0; background:linear-gradient(270deg, var(--bp-navy-deep), transparent); }
+  .navrow{ position:relative; display:flex; gap: 2px; padding: 0 32px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-behavior: smooth; }
   .navrow::-webkit-scrollbar{ display: none; }
+  .scope-bar{ background: var(--bp-panel-hi); padding: 10px 32px; margin-bottom: 0; border-bottom: 1px solid var(--bp-panel-line); }
+  .scope-bar .crumb-item{ font-size: 11px; color: var(--paper); }
+  .scope-bar .crumb-sep{ color: var(--bp-line); font-size: 11px; }
   .navtab{
     font-family:'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.03em;
     padding: 12px 15px; color: var(--paper-dim); border: none; background: none; cursor: pointer;
@@ -173,6 +179,16 @@
   /* ===== Empty state ===== */
   .empty-state{ padding: 2.4rem 1rem; text-align:center; color: var(--paper-dim); font-size: 12px; }
   .empty-state b{ display:block; color: var(--paper); font-size: 13px; margin-bottom: 6px; font-family:'Space Grotesk', sans-serif; font-weight: 600; }
+
+  /* ===== Data source modal ===== */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(12,20,15,0.55); z-index:200; align-items:center; justify-content:center; padding:20px; }
+  .modal-panel{ background:var(--bp-panel); border:1px solid var(--bp-panel-line); border-radius:var(--radius); max-width:560px; width:100%; max-height:85vh; overflow-y:auto; padding:22px 24px; box-shadow:0 12px 44px rgba(0,0,0,0.35); }
+  .modal-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .modal-head h2{ font-size:15px; margin:0; }
+  .modal-close{ background:none; border:none; color:var(--paper-dim); font-size:16px; cursor:pointer; width:28px; height:28px; }
+  .modal-close:hover{ color:var(--paper); }
+  .modal-panel input[type="password"]{ font-size:12px; }
+  .modal-panel input[type="password"]:focus-visible{ outline: 2px solid var(--data-cyan); }
 
   /* ===== Grids / panels ===== */
   .maingrid{ display:grid; grid-template-columns: 1.35fr 1fr; gap: 16px; margin-bottom: 24px; align-items: start; }
@@ -284,6 +300,9 @@
         DATA DATE&nbsp; <b id="hdr-datadate">—</b><br>
         PROJECTS TRACKED&nbsp; <b id="hdr-projectcount">—</b>
       </div>
+      <button type="button" id="data-source-btn" class="theme-toggle-btn" title="Data source" aria-label="Open data source panel">
+        <span>⚙</span>
+      </button>
       <button type="button" id="theme-toggle" class="theme-toggle-btn" title="Toggle light/dark theme" aria-label="Toggle light/dark theme">
         <span id="theme-toggle-icon">◐</span>
       </button>
@@ -293,6 +312,15 @@
   <nav class="navbar">
     <div class="navrow" id="navrow" role="tablist" aria-label="Report sections"></div>
   </nav>
+
+  <div class="daterange scope-bar" id="scope-bar" style="display:none;">
+    <span class="slabel">Scope</span>
+    <span class="crumb-item mono">Portfolio</span>
+    <span class="crumb-sep">▸</span>
+    <select class="mono" id="scope-project"><option value="">All Projects</option></select>
+    <span class="crumb-sep">▸</span>
+    <select class="mono" id="scope-wbs" disabled><option value="">All WBS</option></select>
+  </div>
 
   <main>
     <section class="content" id="sec-overview">
@@ -311,154 +339,90 @@
       </div>
     </section>
 
-    <section class="content" id="sec-schedule">
-      <p class="sectionlabel">02 · Schedule Performance</p>
-      <div class="kpirow five" id="kpi-schedule"></div>
-      <div class="panel" style="margin-bottom:16px;">
-        <h2>Planned vs. Actual Completions <span class="tag">CUMULATIVE, PORTFOLIO-WIDE</span></h2>
-        <div class="chart-legend">
-          <span class="item"><span class="swatch" style="background:var(--data-cyan)"></span>Planned (by early finish)</span>
-          <span class="item"><span class="swatch" style="background:var(--hi-vis)"></span>Actual (completed)</span>
-        </div>
-        <div class="daterange" id="scurve-range">
-          <span class="slabel">Year</span>
-          <select class="mono" id="scurve-year"></select>
-          <span class="slabel">From</span>
-          <select class="mono" id="scurve-from"></select>
-          <span class="slabel">To</span>
-          <select class="mono" id="scurve-to"></select>
-        </div>
-        <div id="scurve-chart"></div>
-      </div>
-      <div class="maingrid even">
-        <div class="panel">
-          <h2>Critical vs Non-Critical <span class="tag">BY PROJECT</span></h2>
-          <div id="critical-bars"></div>
-        </div>
-        <div class="panel">
-          <h2>Milestone Log <span class="tag">11 TOTAL</span></h2>
-          <div class="tablewrap"><table id="milestone-table"></table></div>
-        </div>
-      </div>
+    <section class="content" id="sec-asp-schedule">
+      <p class="sectionlabel">02 · Schedule <span class="hint">on time?</span></p>
+      <div class="aspect-mount" data-aspect="schedule"></div>
     </section>
 
-    <section class="content" id="sec-dcma">
-      <p class="sectionlabel">03 · DCMA 14-Point Schedule Health <span class="hint">portfolio-wide assessment</span></p>
-      <div class="dcmagrid" id="dcma-grid"></div>
-      <div class="legend-note">Checks 5, 11, 13 &amp; 14 require constraint or baseline data not present in the current snapshot(s). They activate automatically once a second dated snapshot or constraint fields are dropped into the source folder.</div>
+    <section class="content" id="sec-asp-cost">
+      <p class="sectionlabel">03 · Cost <span class="hint">on budget?</span></p>
+      <div class="aspect-mount" data-aspect="cost"></div>
     </section>
 
-    <section class="content" id="sec-cost">
-      <p class="sectionlabel">04 · Cost &amp; Resources <span class="hint">EGP, resource detail currently CairoHQ only</span></p>
-      <div class="kpirow" id="kpi-cost"></div>
-      <div class="kpirow" id="kpi-cost-ev" style="margin-top:-10px;"></div>
-      <div class="maingrid thirds">
-        <div class="panel">
-          <h2>Budgeted vs Actual <span class="tag">BY TYPE</span></h2>
-          <div id="cost-bars"></div>
-        </div>
-        <div class="panel">
-          <h2>Cost Share <span class="tag">ACTUAL SPEND</span></h2>
-          <div id="cost-donut"></div>
-        </div>
-        <div class="panel">
-          <h2>Actual Cost <span class="tag">BY PROJECT</span></h2>
-          <div id="cost-by-project"></div>
-        </div>
-      </div>
+    <section class="content" id="sec-asp-progress">
+      <p class="sectionlabel">04 · Progress <span class="hint">done vs plan?</span></p>
+      <div class="aspect-mount" data-aspect="progress"></div>
     </section>
 
-    <section class="content" id="sec-resources">
-      <p class="sectionlabel">05 · Resource Utilization <span class="hint">actual vs. budgeted units — CairoHQ only</span></p>
-      <div class="kpirow" id="kpi-resources"></div>
-      <div class="maingrid even">
-        <div class="panel">
-          <h2>Utilization by Resource <span class="tag">ACTUAL / BUDGETED UNITS</span></h2>
-          <div id="resource-bars"></div>
-        </div>
-        <div class="panel">
-          <h2>Resource Detail <span class="tag">TABLE</span></h2>
-          <div class="tablewrap"><table id="resource-table"></table></div>
-        </div>
-      </div>
-      <div class="legend-note">Utilization = actual units consumed against each resource's budgeted (planned) allocation across all its assignments — a proxy for over/under-allocation. A true load-vs-capacity histogram (assigned hours against each trade's calendar peak) needs a resource calendar/capacity table not yet in the source data.</div>
+    <section class="content" id="sec-asp-integrity">
+      <p class="sectionlabel">05 · Integrity <span class="hint">trust the plan? — DCMA-style checks, scoped</span></p>
+      <div class="aspect-mount" data-aspect="integrity"></div>
+      <div class="legend-note">DCMA checks 5, 11, 13 &amp; 14 (hard constraints, missed tasks, CPLI, BEI) need constraint or baseline data not present in the current snapshot(s) and aren't in this registry yet — they'll activate once that data lands.</div>
     </section>
 
-    <section class="content" id="sec-detail">
-      <p class="sectionlabel">06 · Project Detail <span class="hint">select a project — CPI/SPI shown where cost data exists</span></p>
-      <div class="daterange" style="margin-bottom:22px;">
-        <span class="slabel">Project</span>
-        <select class="mono" id="detail-project-select"></select>
-      </div>
-      <div class="panel" style="margin-bottom:16px;">
-        <h2 id="detail-heading">— <span class="tag">HEADLINE INDICATORS</span></h2>
-        <div class="gauge-row" id="detail-gauges"></div>
-      </div>
-      <div class="maingrid even">
-        <div class="panel">
-          <h2>Schedule &amp; Float <span class="tag">CURRENT SNAPSHOT</span></h2>
-          <div id="detail-stats"></div>
-        </div>
-        <div class="panel">
-          <h2>Milestones <span class="tag">THIS PROJECT</span></h2>
-          <div class="tablewrap"><table id="detail-milestones"></table></div>
-        </div>
-      </div>
+    <section class="content" id="sec-asp-resources">
+      <p class="sectionlabel">06 · Resources <span class="hint">adequate? — resource data currently CairoHQ only</span></p>
+      <div class="aspect-mount" data-aspect="resources"></div>
     </section>
 
-    <section class="content" id="sec-slippage">
-      <p class="sectionlabel">07 · Slippage <span class="hint">EAC/ETC live now — variance vs. plan pending baseline</span></p>
-      <div class="kpirow" id="kpi-slippage"></div>
-      <div class="legend-note">Schedule Variance (EGP) and Cost Variance (EGP) use Planned Value approximated by spreading each activity's budgeted cost linearly across its own early-date span — not a true baseline. <b style="color:var(--paper)">Progress Variance %</b> (actual vs. baseline-planned % complete) stays blank until a baseline XER/XML is imported per project — same requirement as DCMA checks 11, 13 &amp; 14.</div>
-    </section>
-
-    <section class="content" id="sec-actions">
-      <p class="sectionlabel">08 · Issues &amp; Actions <span class="hint">manually maintained — not derived from P6 data</span></p>
-      <div class="panel">
-        <h2>Open Items <span class="tag">OWNER · TARGET · STATUS</span></h2>
-        <div class="tablewrap"><table id="actions-table"></table></div>
-      </div>
+    <section class="content" id="sec-asp-risk">
+      <p class="sectionlabel">07 · Risk <span class="hint">what's at risk?</span></p>
+      <div class="aspect-mount" data-aspect="risk"></div>
     </section>
 
     <section class="content" id="sec-explorer">
-      <p class="sectionlabel">09 · Activity Explorer <span class="hint" id="explorer-count"></span></p>
+      <p class="sectionlabel">08 · Activity Explorer <span class="hint" id="explorer-count"></span></p>
       <div class="chiprow" id="statuschips"><span class="slabel">Status</span></div>
       <div class="panel" style="margin-bottom: 26px;">
         <div class="tablewrap" style="max-height: 560px; overflow-y: auto;"><table id="explorer-table"></table></div>
       </div>
     </section>
+  </main>
 
-    <section class="content" id="sec-data">
-      <p class="sectionlabel">10 · Data Source <span class="hint">update the schedule data behind this dashboard</span></p>
-      <div class="maingrid even">
-        <div class="panel">
-          <h2>Currently Loaded Files <span class="tag" id="data-file-count">—</span></h2>
-          <div class="tablewrap"><table id="data-files-table"></table></div>
+  <div class="modal-overlay" id="data-modal-overlay" style="display:none;">
+    <div class="modal-panel">
+      <div class="modal-head">
+        <h2>Data Source</h2>
+        <button type="button" id="data-modal-close" class="modal-close" aria-label="Close">✕</button>
+      </div>
+      <div id="data-modal-gate">
+        <p style="font-size:12px; color:var(--paper-dim); line-height:1.6; margin:10px 0 0;">
+          Enter the password to view or update the data source.
+        </p>
+        <p style="font-size:11px; color:var(--paper-dim); line-height:1.6; opacity:.75; margin:6px 0 0;">
+          Soft gate only — this is a public static page, so anything shipped in the page's own code can be read via view-source regardless of this prompt. What actually protects the data is that the upload links below require a real GitHub login with write access to this repo. This just keeps casual visitors from wandering in.
+        </p>
+        <div style="display:flex; gap:8px; margin-top:14px;">
+          <input type="password" id="data-modal-password" class="mono" placeholder="Password" style="flex:1; background:var(--bp-navy-deep); color:var(--paper); border:1px solid var(--bp-panel-line); border-radius:var(--radius); padding:8px 10px;">
+          <button type="button" id="data-modal-unlock" class="chip" style="cursor:pointer;">Unlock</button>
         </div>
-        <div class="panel">
-          <h2>Add or Replace a Project Snapshot <span class="tag">GITHUB</span></h2>
-          <p style="font-size:12px; color:var(--paper-dim); line-height:1.6; margin:0 0 14px;">
-            This page has no backend — every time it loads, it fetches whatever files <code>data/manifest.json</code> lists straight from this repo and recomputes every KPI client-side. To update the data:
-          </p>
-          <ol style="font-size:12px; color:var(--paper-dim); line-height:1.9; margin:0 0 18px; padding-left:18px;">
-            <li>Export a fresh <code>.xer</code>, P6 <code>.xml</code>, or the Excel template, named <code>ProjectKey_yyyy-MM-dd.ext</code></li>
-            <li>Upload it into <code>data/</code> (link below)</li>
-            <li>Add its filename to the <code>files</code> array in <code>manifest.json</code> (link below)</li>
-            <li>Reload this page — no rebuild or redeploy needed</li>
-          </ol>
-          <div style="display:flex; flex-direction:column; gap:10px;">
-            <a href="https://github.com/sherifyehiya/construction-planning-dashboard/upload/main/data" target="_blank" rel="noopener" class="chip" style="text-align:center; text-decoration:none;">Upload files to data/ →</a>
-            <a href="https://github.com/sherifyehiya/construction-planning-dashboard/edit/main/data/manifest.json" target="_blank" rel="noopener" class="chip" style="text-align:center; text-decoration:none;">Edit manifest.json →</a>
-            <a href="https://github.com/sherifyehiya/construction-planning-dashboard/tree/main/data" target="_blank" rel="noopener" class="chip" style="text-align:center; text-decoration:none;">Browse / download data/ →</a>
-          </div>
+        <p id="data-modal-error" style="color:var(--hi-vis); font-size:11px; margin-top:8px; display:none;">Incorrect password.</p>
+      </div>
+      <div id="data-modal-content" style="display:none;">
+        <h2 style="font-size:12.5px; margin:16px 0 10px; text-transform:uppercase; letter-spacing:.04em;">Currently Loaded Files <span class="tag" id="data-file-count">—</span></h2>
+        <div class="tablewrap"><table id="data-files-table"></table></div>
+        <h2 style="font-size:12.5px; margin:20px 0 10px; text-transform:uppercase; letter-spacing:.04em;">Add or Replace a Project Snapshot</h2>
+        <p style="font-size:12px; color:var(--paper-dim); line-height:1.6; margin:0 0 12px;">
+          This page has no backend — every load fetches whatever files <code>data/manifest.json</code> lists and recomputes every KPI client-side.
+        </p>
+        <ol style="font-size:12px; color:var(--paper-dim); line-height:1.8; margin:0 0 16px; padding-left:18px;">
+          <li>Export a fresh <code>.xer</code>, P6 <code>.xml</code>, or the Excel template, named <code>ProjectKey_yyyy-MM-dd.ext</code></li>
+          <li>Upload it into <code>data/</code> (link below)</li>
+          <li>Add its filename to the <code>files</code> array in <code>manifest.json</code></li>
+          <li>Reload this page — no rebuild or redeploy needed</li>
+        </ol>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <a href="https://github.com/sherifyehiya/construction-planning-dashboard/upload/main/data" target="_blank" rel="noopener" class="chip" style="text-align:center; text-decoration:none;">Upload files to data/ →</a>
+          <a href="https://github.com/sherifyehiya/construction-planning-dashboard/edit/main/data/manifest.json" target="_blank" rel="noopener" class="chip" style="text-align:center; text-decoration:none;">Edit manifest.json →</a>
+          <a href="https://github.com/sherifyehiya/construction-planning-dashboard/tree/main/data" target="_blank" rel="noopener" class="chip" style="text-align:center; text-decoration:none;">Browse / download data/ →</a>
         </div>
       </div>
-    </section>
-  </main>
+    </div>
+  </div>
 
   <div class="titleblock">
     <div class="tb-cell"><div class="tb-label">Project</div><div class="tb-value">Planning Dept — Portfolio Dashboard</div></div>
-    <div class="tb-cell"><div class="tb-label">Sheet</div><div class="tb-value" id="tb-sheet">01 OF 10</div></div>
+    <div class="tb-cell"><div class="tb-label">Sheet</div><div class="tb-value" id="tb-sheet">01 OF 08</div></div>
     <div class="tb-cell"><div class="tb-label">Data Date</div><div class="tb-value" id="tb-datadate">—</div></div>
     <div class="tb-cell"><div class="tb-label">Source</div><div class="tb-value" id="tb-source">—</div></div>
     <div class="tb-cell"><div class="tb-label">Status</div><div class="tb-value" style="color:var(--data-cyan)" id="tb-status">LOADING…</div></div>
@@ -477,25 +441,24 @@
 <script src="lib/xlsx.mini.min.js"></script>
 <script src="app-data.js"></script>
 <script>
-let PROJECTS = [], PORTFOLIO = {}, DCMA = [], COST_BY_TYPE = [], COST_BY_PROJECT = [],
-    SCURVE = [], MILESTONES = [], RESOURCES = [], ACTIVITIES = [];
+let PROJECTS = [], PORTFOLIO = {}, MILESTONES = [], ACTIVITIES = [], MODEL = null;
 
 // Issues & Actions is a manually maintained decision log, not derived from P6 schedule data —
 // same category as RFI/MIR status and material tracking. Starts empty; add rows as issues arise.
+// Shape: {issue, project, owner, target: "yyyy-MM-dd", status: "Open"|"In Progress"|"Complete"}
 const ISSUES = [];
 
 const SECTIONS = [
   {id:"sec-overview", label:"01 · Portfolio Overview"},
-  {id:"sec-schedule", label:"02 · Schedule Performance"},
-  {id:"sec-dcma", label:"03 · Schedule Health"},
-  {id:"sec-cost", label:"04 · Cost & Resources"},
-  {id:"sec-resources", label:"05 · Resource Utilization"},
-  {id:"sec-detail", label:"06 · Project Detail"},
-  {id:"sec-slippage", label:"07 · Slippage"},
-  {id:"sec-actions", label:"08 · Issues & Actions"},
-  {id:"sec-explorer", label:"09 · Activity Explorer"},
-  {id:"sec-data", label:"10 · Data Source"},
+  {id:"sec-asp-schedule", label:"02 · Schedule"},
+  {id:"sec-asp-cost", label:"03 · Cost"},
+  {id:"sec-asp-progress", label:"04 · Progress"},
+  {id:"sec-asp-integrity", label:"05 · Integrity"},
+  {id:"sec-asp-resources", label:"06 · Resources"},
+  {id:"sec-asp-risk", label:"07 · Risk"},
+  {id:"sec-explorer", label:"08 · Activity Explorer"},
 ];
+const ASPECT_TAB_IDS = new Set(SECTIONS.filter(s => s.id.startsWith("sec-asp-")).map(s => s.id));
 const CAT_COLORS = ["var(--data-cyan)", "var(--bp-line)", "var(--paper-dim)", "var(--status-amber)"];
 
 const fmtPct = v => (v*100).toFixed(1) + "%";
@@ -503,10 +466,6 @@ const fmtMoney = v => "EGP " + Math.round(v).toLocaleString("en-US");
 const fmtDate = s => s ? new Date(s + "T00:00:00").toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"}).toUpperCase() : "—";
 const statusPill = s => `<span class="pill ${s==="Complete"?"green":s==="In Progress"?"cyan":"amber"}">${s}</span>`;
 const pctPill = pct => `<span class="pill ${pct>=0.85?"green":pct>=0.6?"amber":"orange"}">${(pct*100).toFixed(0)}%</span>`;
-const resUtil = r => (r.budgetedUnits==null || r.budgetedUnits===0) ? null : r.actualUnits / r.budgetedUnits;
-const utilPill = u => u===null ? '<span class="pill na">N/A</span>' : `<span class="pill ${u>1?'orange':u>=0.7?'green':'amber'}">${(u*100).toFixed(0)}%</span>`;
-const ratioColor = v => v==null ? "var(--paper-dim)" : v>=1 ? "var(--status-green)" : v>=0.9 ? "var(--status-amber)" : "var(--hi-vis)";
-const ratioClass = v => v==null ? "" : v>=1 ? "ok" : v>=0.9 ? "watch" : "warn";
 
 // Semicircle gauge. frac: 0-1 (already normalized by the caller) or null for "no data".
 function svgGauge({frac, display, label, color}){
@@ -543,6 +502,11 @@ function el(html){ const t = document.createElement("template"); t.innerHTML = h
 function renderNav(){
   const nav = document.getElementById("navrow");
   nav.innerHTML = "";
+  // Vertical mouse-wheel scrolls the tab strip horizontally — most people don't think to
+  // shift-scroll or swipe a strip like this, and the fade edges alone don't teach that.
+  nav.addEventListener("wheel", e => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); nav.scrollLeft += e.deltaY; }
+  }, { passive: false });
   SECTIONS.forEach(s => {
     const btn = el(`<button type="button" class="navtab ${s.id===activeTab?'active':''}" id="nav-${s.id}" role="tab" aria-selected="${s.id===activeTab}">${s.label}</button>`);
     // Guard against the tab strip's own drag-to-scroll being misread as a tap:
@@ -562,7 +526,11 @@ function switchTab(id){
   document.querySelectorAll(".navtab").forEach(t => t.classList.toggle("active", t.id === "nav-"+id));
   const idx = SECTIONS.findIndex(s => s.id === id);
   const sheetEl = document.getElementById("tb-sheet");
-  if (sheetEl && idx >= 0) sheetEl.textContent = `${String(idx+1).padStart(2,"0")} OF ${SECTIONS.length}`;
+  if (sheetEl && idx >= 0) sheetEl.textContent = `${String(idx+1).padStart(2,"0")} OF ${String(SECTIONS.length).padStart(2,"0")}`;
+  const activeBtn = document.getElementById("nav-"+id);
+  if (activeBtn) activeBtn.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  const scopeBar = document.getElementById("scope-bar");
+  if (scopeBar) scopeBar.style.display = ASPECT_TAB_IDS.has(id) ? "flex" : "none";
   window.scrollTo({top:0, behavior:"instant"});
 }
 
@@ -685,241 +653,240 @@ function renderPctBars(){
   }).join("");
 }
 
-function renderScheduleKpis(){
-  document.getElementById("kpi-schedule").innerHTML = `
-    <div class="kpi warn"><div class="label">Critical Activities</div><div class="value">${PORTFOLIO.criticalCnt}</div><div class="sub">of ${PORTFOLIO.activities} total</div></div>
-    <div class="kpi"><div class="label">Avg Total Float</div><div class="value">${PORTFOLIO.avgFloat.toFixed(1)}<small>d</small></div><div class="sub">Portfolio average</div></div>
-    <div class="kpi ok"><div class="label">Negative Float</div><div class="value">${PORTFOLIO.negFloatCnt}</div><div class="sub">Activities behind logic</div></div>
-    <div class="kpi ok"><div class="label">On-Time %</div><div class="value">${(PORTFOLIO.onTime*100).toFixed(0)}<small>%</small></div><div class="sub">Completed with float ≥ 0</div></div>
-    <div class="kpi"><div class="label">Milestones Remaining</div><div class="value">${PORTFOLIO.milestonesRemaining}</div><div class="sub">of ${PORTFOLIO.milestonesTotal} total</div></div>
-  `;
+// =====================================================================================
+// ASPECT ANATOMY — one reusable renderer (Verdict / Breakdown / Detail / Exceptions)
+// drives all six aspect tabs off KPI_REGISTRY + rollup(), scoped by the breadcrumb below.
+// =====================================================================================
+
+let scopeProject = "", scopeWbs = "";
+
+function currentScope(){
+  if (scopeWbs) return { level: "wbs", key: { project: scopeProject, wbs: scopeWbs } };
+  if (scopeProject) return { level: "project", key: { project: scopeProject } };
+  return { level: "portfolio", key: {} };
+}
+function scopeLabel(){
+  if (scopeWbs) {
+    const w = MODEL.wbs.find(x => x.WBSKey === scopeWbs);
+    return `${scopeProject} ▸ ${w ? (w.WBSName || w.WBSCode) : scopeWbs}`;
+  }
+  if (scopeProject) return scopeProject;
+  return "Portfolio-wide";
 }
 
-function renderCriticalBars(){
-  document.getElementById("critical-bars").innerHTML = PROJECTS.map(p => {
-    const pct = p.critical / p.total;
-    const dim = activeProject!=="All" && activeProject!==p.name ? "style='opacity:.35'" : "";
-    return `<div class="bar-row" ${dim}><div class="bar-label"><span class="name">${p.name}</span><span class="pct">${p.critical} / ${p.total}</span></div><div class="bar-track"><div class="bar-fill low" style="width:${(pct*100).toFixed(0)}%"></div></div></div>`;
-  }).join("");
+function ragClassFor(kpi, value){
+  if (value == null || !kpi.rag) return "";
+  const { green, amber } = kpi.rag;
+  if (kpi.direction === "higher-better") return value >= green ? "ok" : value >= amber ? "watch" : "warn";
+  return value <= green ? "ok" : value <= amber ? "watch" : "warn";
+}
+function sampleSizeFor(kpi, node){
+  if (kpi.aspect === "resources") return node.resCount;
+  if (kpi.id === "dcma_leads" || kpi.id === "dcma_lags") return node.relCount;
+  return node.count;
+}
+function fmtKpiRaw(kpi, value){
+  switch (kpi.unit) {
+    case "pct": return (value * 100).toFixed(kpi.decimals) + "%";
+    case "ratio": return value.toFixed(kpi.decimals);
+    case "egp": return fmtMoney(value);
+    case "days": return value.toFixed(kpi.decimals) + "d";
+    case "count": return String(Math.round(value));
+    default: return String(value);
+  }
+}
+// Returns {display, ragCls, raw} — suppresses a percentage on a tiny sample (<5) in favor
+// of the raw count, per the "never show a misleading 0%/100% off 1 or 2 items" rule.
+function evalKpi(kpi, node){
+  const raw = kpi.formula(node);
+  if (raw == null) return { display: "n/a", ragCls: "", raw: null };
+  const n = sampleSizeFor(kpi, node);
+  if (kpi.unit === "pct" && n != null && n < 5) {
+    return { display: `${Math.round(raw * n)} / ${n}`, ragCls: "", raw };
+  }
+  return { display: fmtKpiRaw(kpi, raw), ragCls: ragClassFor(kpi, raw), raw };
+}
+function kpiCardHtml(kpi, node, { useGauge = false } = {}){
+  const { display, ragCls, raw } = evalKpi(kpi, node);
+  const targetStr = kpi.target != null ? `Target ${fmtKpiRaw(kpi, kpi.target)}` : (kpi.rag ? "" : "No target — informational");
+  if (useGauge && raw != null && (kpi.unit === "ratio" || kpi.unit === "pct")) {
+    const domainMax = kpi.unit === "ratio" ? 1.2 : 1.0;
+    const frac = Math.max(0, Math.min(1, raw / domainMax));
+    const color = ragCls === "ok" ? "var(--status-green)" : ragCls === "watch" ? "var(--status-amber)" : ragCls === "warn" ? "var(--hi-vis)" : "var(--data-cyan)";
+    return `<div class="gauge-wrap">${svgGauge({ frac, display, label: kpi.shortName, color })}<div class="gauge-note">${targetStr}</div></div>`;
+  }
+  return `<div class="kpi ${ragCls}"><div class="label">${kpi.shortName}</div><div class="value">${display}</div><div class="sub">${targetStr}</div></div>`;
 }
 
-function renderMilestones(){
-  const filtered = MILESTONES.filter(m => activeProject==="All" || m.project===activeProject);
-  const rows = filtered.map(m => `<tr><td class="pname">${m.name}</td><td>${m.project}</td><td>${statusPill(m.status)}</td><td>${fmtDate(m.date)}</td></tr>`).join("");
-  document.getElementById("milestone-table").innerHTML = `<thead><tr><th>Milestone</th><th>Project</th><th>Status</th><th>Date</th></tr></thead><tbody>${rows || '<tr><td colspan="4" style="color:var(--paper-dim)">No milestones for this project.</td></tr>'}</tbody>`;
+// Next level down from the current scope, for the Breakdown/Exceptions slots.
+function breakdownGroups(scope){
+  if (scope.level === "portfolio") {
+    return MODEL.projects.map(p => ({ label: p.ProjectName, level: "project", key: { project: p.ProjectKey } }));
+  }
+  if (scope.level === "project") {
+    const rows = MODEL.wbs.filter(w => w.ProjectKey === scope.key.project);
+    return rows.map(w => ({ label: w.WBSName || w.WBSCode || w.WBSKey, level: "wbs", key: { project: scope.key.project, wbs: w.WBSKey } }));
+  }
+  return []; // wbs level: no further breakdown yet (would need an activity-level drill)
 }
 
-function dcmaCard(d){
-  let valHtml = d.fmt==="pct" ? fmtPct(d.val) : d.fmt==="int" ? d.val : `<span class="val small">${d.val}</span>`;
-  return `<div class="dcma ${d.status}"><div><div class="num">DCMA ${String(d.n).padStart(2,"0")}</div></div><div>${d.fmt==="txt" ? valHtml : `<div class="val">${valHtml}</div>`}<div class="name">${d.name}${d.threshold ? ` · target ${d.threshold}` : ""}</div></div></div>`;
-}
-function renderDcma(){ document.getElementById("dcma-grid").innerHTML = DCMA.map(dcmaCard).join(""); }
-
-function renderCostKpis(){
-  document.getElementById("kpi-cost").innerHTML = `
-    <div class="kpi"><div class="label">Total Budgeted</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.budgCost)}</div></div>
-    <div class="kpi"><div class="label">Total Actual</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.actCost)}</div></div>
-    <div class="kpi ${PORTFOLIO.costVar<0?'ok':'warn'}"><div class="label">Cost Variance</div><div class="value">${(PORTFOLIO.costVar*100).toFixed(1)}<small>%</small></div><div class="sub">${PORTFOLIO.costVar<0?"Under budget":"Over budget"}</div></div>
-    <div class="kpi"><div class="label">Distinct Resources</div><div class="value">${PORTFOLIO.distinctRes}</div><div class="sub">Tracked, CairoHQ</div></div>
-  `;
-  if (PORTFOLIO.cpi == null) { document.getElementById("kpi-cost-ev").innerHTML = ""; return; }
-  const eacOver = PORTFOLIO.eac > PORTFOLIO.budgCost;
-  document.getElementById("kpi-cost-ev").innerHTML = `
-    <div class="kpi ${ratioClass(PORTFOLIO.cpi)}"><div class="label">CPI</div><div class="value">${PORTFOLIO.cpi.toFixed(2)}</div><div class="sub">Earned ÷ Actual cost</div></div>
-    <div class="kpi ${ratioClass(PORTFOLIO.spi)}"><div class="label">SPI</div><div class="value">${PORTFOLIO.spi!=null?PORTFOLIO.spi.toFixed(2):"N/A"}</div><div class="sub">Earned ÷ Planned value</div></div>
-    <div class="kpi ${eacOver?'warn':'ok'}"><div class="label">EAC</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.eac)}</div><div class="sub">${eacOver?"Forecast over budget":"Forecast within budget"}</div></div>
-    <div class="kpi"><div class="label">ETC</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.etc)}</div><div class="sub">Remaining cost to complete</div></div>
-  `;
-}
-function renderCostBars(){
-  const max = Math.max(...COST_BY_TYPE.map(c=>Math.max(c.budgeted,c.actual)));
-  document.getElementById("cost-bars").innerHTML = COST_BY_TYPE.map(c => `
-    <div class="bar-row"><div class="bar-label"><span class="name">${c.type} · Budg.</span><span class="pct">${fmtMoney(c.budgeted)}</span></div><div class="bar-track"><div class="bar-fill" style="width:${(c.budgeted/max*100).toFixed(1)}%"></div></div></div>
-    <div class="bar-row"><div class="bar-label"><span class="name">${c.type} · Actual</span><span class="pct">${fmtMoney(c.actual)}</span></div><div class="bar-track"><div class="bar-fill ${c.actual>c.budgeted?'low':'high'}" style="width:${(c.actual/max*100).toFixed(1)}%"></div></div></div>
-  `).join("");
-}
-function renderCostByProject(){
-  const max = Math.max(...COST_BY_PROJECT.map(c=>c.actual), 1);
-  document.getElementById("cost-by-project").innerHTML = COST_BY_PROJECT.map(c => `
-    <div class="bar-row"><div class="bar-label"><span class="name">${c.name}</span><span class="pct">${c.actual ? fmtMoney(c.actual) : "no data"}</span></div><div class="bar-track"><div class="bar-fill" style="width:${(c.actual/max*100).toFixed(1)}%"></div></div></div>
-  `).join("");
+function nodeWithIssues(level, key){
+  const node = rollup(level, key, MODEL);
+  node.openIssuesCount = ISSUES.filter(i => (level === "portfolio" || i.project === key.project) && i.status !== "Complete").length;
+  return node;
 }
 
-function renderDonut(){
-  const total = COST_BY_TYPE.reduce((s,c)=>s+c.actual,0);
-  const r = 46, cx = 60, cy = 60, circ = 2*Math.PI*r;
-  let offset = 0;
-  const segs = COST_BY_TYPE.map((c,i) => {
-    const frac = c.actual/total;
-    const dash = frac*circ;
-    const seg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" style="stroke:${CAT_COLORS[i]}" stroke-width="16" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
-    offset += dash;
-    return seg;
-  }).join("");
-  const svg = `<svg class="chart-svg" viewBox="0 0 120 120" style="max-width:180px;margin:0 auto;display:block;">
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bp-navy-deep)" stroke-width="16"/>
-    ${segs}
-    <text x="${cx}" y="${cy-2}" text-anchor="middle" class="mono" font-size="11" fill="var(--paper)">${(total/1e6).toFixed(1)}M</text>
-    <text x="${cx}" y="${cy+11}" text-anchor="middle" class="mono" font-size="7" fill="var(--paper-dim)">EGP ACTUAL</text>
-  </svg>`;
-  const legend = COST_BY_TYPE.map((c,i) => `<div class="row"><span class="swatch" style="background:${CAT_COLORS[i]}"></span><span>${c.type}</span><span class="amt">${(c.actual/total*100).toFixed(0)}%</span></div>`).join("");
-  document.getElementById("cost-donut").innerHTML = svg + `<div class="donut-legend">${legend}</div>`;
-}
+function renderAspect(aspectId, container){
+  const kpis = KPI_REGISTRY.filter(k => k.aspect === aspectId);
+  const scope = currentScope();
+  const headline = kpis.filter(k => k.isHeadline && k.levels.includes(scope.level));
+  const node = nodeWithIssues(scope.level, scope.key);
 
-function renderResourceKpis(){
-  const withData = RESOURCES.filter(r => resUtil(r)!==null);
-  const avgUtil = withData.reduce((s,r)=>s+resUtil(r),0) / withData.length;
-  const over = withData.filter(r => resUtil(r) > 1).length;
-  const under = withData.filter(r => resUtil(r) < 0.6).length;
-  document.getElementById("kpi-resources").innerHTML = `
-    <div class="kpi"><div class="label">Resources Tracked</div><div class="value">${RESOURCES.length}</div><div class="sub">CairoHQ assignments</div></div>
-    <div class="kpi"><div class="label">Avg Utilization</div><div class="value">${(avgUtil*100).toFixed(0)}<small>%</small></div><div class="sub">Actual vs. budgeted units</div></div>
-    <div class="kpi warn"><div class="label">Over-Allocated</div><div class="value">${over}</div><div class="sub">Actual exceeds budgeted units</div></div>
-    <div class="kpi ${under?'warn':'ok'}"><div class="label">Under-Utilized</div><div class="value">${under}</div><div class="sub">Below 60% of budgeted units</div></div>
-  `;
-}
-function renderResourceBars(){
-  document.getElementById("resource-bars").innerHTML = RESOURCES.map(r => {
-    const u = resUtil(r);
-    const pctLabel = u===null ? "no data" : (u*100).toFixed(0)+"%";
-    const widthPct = u===null ? 0 : Math.min(u*100, 100);
-    const cls = u===null ? "" : u>1 ? "low" : u>=0.7 ? "high" : "";
-    return `<div class="bar-row"><div class="bar-label"><span class="name">${r.name} <span style="color:var(--bp-line)">· ${r.type}</span></span><span class="pct">${pctLabel}</span></div><div class="bar-track"><div class="bar-fill ${cls}" style="width:${widthPct.toFixed(0)}%"></div></div></div>`;
-  }).join("");
-}
-function renderResourceTable(){
-  const rows = RESOURCES.map(r => {
-    const u = resUtil(r);
-    return `<tr><td class="pname">${r.name}</td><td>${r.type}</td><td class="num">${r.budgetedUnits ?? "—"}</td><td class="num">${r.actualUnits ?? "—"}</td><td class="num">${utilPill(u)}</td><td class="num">${r.budgetedCost!=null?fmtMoney(r.budgetedCost):"—"}</td><td class="num">${r.actualCost!=null?fmtMoney(r.actualCost):"—"}</td></tr>`;
-  }).join("");
-  document.getElementById("resource-table").innerHTML = `<thead><tr><th>Resource</th><th>Type</th><th class="num">Budg. Units</th><th class="num">Actual Units</th><th class="num">Utilization</th><th class="num">Budgeted Cost</th><th class="num">Actual Cost</th></tr></thead><tbody>${rows}</tbody>`;
-}
-
-// ===== 06 · Project Detail =====
-// CPI/SPI come from each project's own EV/PV (app-data.js) — null (shown as N/A) for a
-// project with no cost/resource assignment data, same scoping as Cost & Resources.
-function setupDetailControls(){
-  const sel = document.getElementById("detail-project-select");
-  sel.innerHTML = PROJECTS.map(p => `<option value="${p.name}">${p.name}</option>`).join("");
-  sel.addEventListener("change", () => { activeProject = sel.value; render(); });
-}
-function renderDetail(){
-  if (!PROJECTS.length) return;
-  const p = PROJECTS.find(x => x.name === activeProject) || PROJECTS[0];
-  const sel = document.getElementById("detail-project-select");
-  if (sel && sel.value !== p.name) sel.value = p.name;
-  document.getElementById("detail-heading").innerHTML = `${p.name} <span class="tag">HEADLINE INDICATORS</span>`;
-
-  const hasCost = p.cpi != null;
-  document.getElementById("detail-gauges").innerHTML = `
-    <div class="gauge-wrap">${svgGauge({frac: p.pctComplete, display: (p.pctComplete*100).toFixed(0)+"%", label:"% Complete", color:"var(--data-cyan)"})}</div>
-    <div class="gauge-wrap">${svgGauge({frac: p.cpi!=null ? Math.min(p.cpi,1.2)/1.2 : null, display: p.cpi!=null ? p.cpi.toFixed(2) : "N/A", label:"CPI", color: ratioColor(p.cpi)})}<div class="gauge-note">${hasCost?"":"No cost data for this project"}</div></div>
-    <div class="gauge-wrap">${svgGauge({frac: p.spi!=null ? Math.min(p.spi,1.2)/1.2 : null, display: p.spi!=null ? p.spi.toFixed(2) : "N/A", label:"SPI", color: ratioColor(p.spi)})}<div class="gauge-note">${hasCost?"":"No cost data for this project"}</div></div>
-  `;
-
-  const pActivities = ACTIVITIES.filter(a => a.project === p.name);
-  const floats = pActivities.map(a => a.float);
-  const avgFloat = floats.length ? floats.reduce((s,f)=>s+f,0)/floats.length : 0;
-  document.getElementById("detail-stats").innerHTML = `
-    <div class="bar-row"><div class="bar-label"><span class="name">Critical Activities</span><span class="pct">${p.critical} / ${p.total}</span></div><div class="bar-track"><div class="bar-fill low" style="width:${(p.critical/p.total*100).toFixed(0)}%"></div></div></div>
-    <div class="bar-row"><div class="bar-label"><span class="name">Avg Total Float</span><span class="pct">${avgFloat.toFixed(1)}d</span></div></div>
-    <div class="bar-row"><div class="bar-label"><span class="name">Progress Variance %</span><span class="pct"><span class="pill na">Pending baseline</span></span></div></div>
-  `;
-  const pms = MILESTONES.filter(m => m.project === p.name);
-  const rows = pms.map(m => `<tr><td class="pname">${m.name}</td><td>${statusPill(m.status)}</td><td>${fmtDate(m.date)}</td></tr>`).join("");
-  document.getElementById("detail-milestones").innerHTML = `<thead><tr><th>Milestone</th><th>Status</th><th>Date</th></tr></thead><tbody>${rows || '<tr><td colspan="3" style="color:var(--paper-dim)">No milestones logged.</td></tr>'}</tbody>`;
-}
-
-// ===== 07 · Slippage =====
-function renderSlippage(){
-  if (PORTFOLIO.cpi == null) {
-    document.getElementById("kpi-slippage").innerHTML = `<div class="empty-state" style="grid-column:1/-1"><b>No cost/assignment data yet</b>EAC, ETC and variance need at least one project with resource assignments.</div>`;
+  if (!headline.length) {
+    container.innerHTML = `<div class="empty-state"><b>Nothing to show at this scope</b>This aspect's KPIs aren't defined at the ${scope.level} level.</div>`;
     return;
   }
-  const svEGP = PORTFOLIO.scheduleVarianceEGP, cvEGP = PORTFOLIO.costVarianceEGP;
-  document.getElementById("kpi-slippage").innerHTML = `
-    <div class="kpi ${PORTFOLIO.eac>PORTFOLIO.budgCost?'warn':'ok'}"><div class="label">EAC</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.eac)}</div><div class="sub">Estimate at completion</div></div>
-    <div class="kpi"><div class="label">ETC</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.etc)}</div><div class="sub">Remaining cost to complete</div></div>
-    <div class="kpi ${svEGP<0?'warn':'ok'}"><div class="label">Schedule Variance</div><div class="value" style="font-size:18px">${fmtMoney(svEGP)}</div><div class="sub">EV − PV (approx.)</div></div>
-    <div class="kpi ${cvEGP<0?'warn':'ok'}"><div class="label">Cost Variance</div><div class="value" style="font-size:18px">${fmtMoney(cvEGP)}</div><div class="sub">EV − AC</div></div>
+  const primary = headline[0];
+  const groups = breakdownGroups(scope);
+  const breakdownRows = groups.map(g => {
+    const gNode = nodeWithIssues(g.level, g.key);
+    const { display, ragCls, raw } = evalKpi(primary, gNode);
+    return { label: g.label, display, ragCls, raw };
+  }).sort((a, b) => {
+    if (a.raw == null) return 1;
+    if (b.raw == null) return -1;
+    return primary.direction === "higher-better" ? a.raw - b.raw : b.raw - a.raw;
+  });
+
+  const verdictHtml = headline.map((k, i) => kpiCardHtml(k, node, { useGauge: i === 0 })).join("");
+  const breakdownHtml = breakdownRows.length
+    ? breakdownRows.map(r => `<div class="bar-row"><div class="bar-label"><span class="name">${r.label}</span><span class="pct">${r.display}</span></div></div>`).join("")
+    : `<p style="font-size:12px;color:var(--paper-dim);margin:0;">No further breakdown at this scope.</p>`;
+
+  const failing = breakdownRows.filter(r => r.ragCls === "warn");
+  const exceptionsHtml = failing.length
+    ? `<table><thead><tr><th>${scope.level === "portfolio" ? "Project" : "WBS"}</th><th class="num">${primary.shortName}</th></tr></thead><tbody>${failing.map(r => `<tr><td class="pname">${r.label}</td><td class="num">${r.display}</td></tr>`).join("")}</tbody></table>`
+    : `<div class="empty-state"><b>Nothing failing ${primary.shortName} right now</b>${scope.level === "wbs" ? "No further breakdown available below WBS level yet." : `All ${scope.level === "portfolio" ? "projects" : "WBS groups"} are at or above the amber threshold.`}</div>`;
+
+  const detailActs = node.acts.slice(0, 60);
+  const detailHtml = `<table><thead><tr><th>Activity</th><th>Project</th><th>Status</th><th class="num">% Comp.</th><th class="num">Float</th></tr></thead><tbody>${
+    detailActs.length
+      ? detailActs.map(a => `<tr><td class="pname">${a.ActivityName}</td><td>${a.ProjectKey}</td><td>${statusPill(a.Status)}</td><td class="num">${a.PercentComplete}%</td><td class="num">${a.TotalFloat}</td></tr>`).join("")
+      : '<tr><td colspan="5" style="color:var(--paper-dim)">No activities in this scope.</td></tr>'
+  }</tbody></table>${node.acts.length > 60 ? `<p style="font-size:11px;color:var(--paper-dim);margin-top:8px;">Showing first 60 of ${node.acts.length} activities.</p>` : ""}`;
+
+  container.innerHTML = `
+    <div class="panel" style="margin-bottom:16px;">
+      <h2>Verdict <span class="tag">${scopeLabel()}</span></h2>
+      <div class="gauge-row">${verdictHtml}</div>
+    </div>
+    <div class="maingrid even">
+      <div class="panel">
+        <h2>Breakdown <span class="tag">${primary.shortName}, WORST FIRST</span></h2>
+        ${breakdownHtml}
+      </div>
+      <div class="panel">
+        <h2>Exceptions <span class="tag">FAILING NOW</span></h2>
+        <div class="tablewrap">${exceptionsHtml}</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Detail <span class="tag">${node.count} ACTIVITIES</span></h2>
+      <div class="tablewrap" style="max-height:400px; overflow-y:auto;">${detailHtml}</div>
+    </div>
   `;
 }
 
-// ===== 08 · Issues & Actions =====
-function renderActions(){
-  const rows = ISSUES.map(i => `<tr><td class="pname">${i.issue}</td><td>${i.project}</td><td>${i.owner}</td><td>${fmtDate(i.target)}</td><td>${statusPill(i.status)}</td></tr>`).join("");
-  document.getElementById("actions-table").innerHTML = ISSUES.length
-    ? `<thead><tr><th>Issue</th><th>Project</th><th>Owner</th><th>Target</th><th>Status</th></tr></thead><tbody>${rows}</tbody>`
-    : `<tbody><tr><td class="empty-state" colspan="5"><b>No open issues logged</b>This page is meant to hold what the schedule alone can't tell you — decisions blocked on someone, recovery actions, delay claims in progress. Add rows to the ISSUES array in the page source (owner, issue, target date, status) as they come up.</td></tr></tbody>`;
-}
-
-let scurveYear = null, scurveFrom = 0, scurveTo = 0;
-
-function setupScurveControls(){
-  const years = [...new Set(SCURVE.map(d => d.y))];
-  scurveYear = years[0];
-  const yearSel = document.getElementById("scurve-year");
-  yearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join("");
-  yearSel.addEventListener("change", () => {
-    scurveYear = Number(yearSel.value);
-    const months = SCURVE.filter(d => d.y === scurveYear);
-    scurveFrom = 0; scurveTo = months.length - 1;
-    populateMonthSelects(months);
-    renderScurve();
-  });
-
-  const months = SCURVE.filter(d => d.y === scurveYear);
-  scurveFrom = 0; scurveTo = months.length - 1;
-  populateMonthSelects(months);
-
-  document.getElementById("scurve-from").addEventListener("change", e => {
-    scurveFrom = Number(e.target.value);
-    if (scurveFrom > scurveTo) scurveTo = scurveFrom;
-    document.getElementById("scurve-to").value = scurveTo;
-    renderScurve();
-  });
-  document.getElementById("scurve-to").addEventListener("change", e => {
-    scurveTo = Number(e.target.value);
-    if (scurveTo < scurveFrom) scurveFrom = scurveTo;
-    document.getElementById("scurve-from").value = scurveFrom;
-    renderScurve();
+function renderAllAspects(){
+  ["schedule", "cost", "progress", "integrity", "resources", "risk"].forEach(aspectId => {
+    const mount = document.querySelector(`.aspect-mount[data-aspect="${aspectId}"]`);
+    if (mount) renderAspect(aspectId, mount);
   });
 }
-function populateMonthSelects(months){
-  const opts = months.map((d,i) => `<option value="${i}">${d.m}</option>`).join("");
-  document.getElementById("scurve-from").innerHTML = opts;
-  document.getElementById("scurve-to").innerHTML = opts;
-  document.getElementById("scurve-from").value = scurveFrom;
-  document.getElementById("scurve-to").value = scurveTo;
+
+function updateWbsSelect(){
+  const wbsSel = document.getElementById("scope-wbs");
+  if (!scopeProject) { wbsSel.innerHTML = `<option value="">All WBS</option>`; wbsSel.disabled = true; return; }
+  const rows = MODEL.wbs.filter(w => w.ProjectKey === scopeProject);
+  wbsSel.innerHTML = `<option value="">All WBS</option>` + rows.map(w => `<option value="${w.WBSKey}">${w.WBSName || w.WBSCode}</option>`).join("");
+  wbsSel.disabled = rows.length === 0;
+}
+function setupScopeBar(){
+  const projSel = document.getElementById("scope-project");
+  projSel.innerHTML = `<option value="">All Projects</option>` + MODEL.projects.map(p => `<option value="${p.ProjectKey}">${p.ProjectName}</option>`).join("");
+  projSel.addEventListener("change", () => {
+    scopeProject = projSel.value; scopeWbs = "";
+    updateWbsSelect();
+    renderAllAspects();
+  });
+  document.getElementById("scope-wbs").addEventListener("change", e => {
+    scopeWbs = e.target.value;
+    renderAllAspects();
+  });
 }
 
-function renderScurve(){
-  const data = SCURVE.filter(d => d.y === scurveYear).slice(scurveFrom, scurveTo + 1);
-  const w = 900, h = 240, padL = 34, padR = 14, padT = 14, padB = 26;
-  const plotW = w - padL - padR, plotH = h - padT - padB;
-  const maxY = Math.max(10, Math.ceil(Math.max(...data.map(d => Math.max(d.planned, d.actual))) / 10) * 10);
-  const n = data.length;
-  const x = i => n <= 1 ? padL : padL + (i/(n-1))*plotW;
-  const y = v => padT + plotH - (v/maxY)*plotH;
-  const pathFor = key => data.map((d,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(" ");
-  const step = maxY / 5;
-  const gridVals = [0,1,2,3,4,5].map(k => Math.round(step*k));
-  const gridLines = gridVals.map(v => `<line class="grid-line" x1="${padL}" x2="${w-padR}" y1="${y(v)}" y2="${y(v)}"/><text class="axis-label" x="${padL-6}" y="${y(v)+3}" text-anchor="end">${v}</text>`).join("");
-  const xLabels = data.map((d,i) => `<text class="axis-label" x="${x(i)}" y="${h-8}" text-anchor="middle">${d.m}</text>`).join("");
-  if (!n) { document.getElementById("scurve-chart").innerHTML = `<p style="color:var(--paper-dim);font-size:12px;">No data in this range.</p>`; return; }
-  const lastP = data[n-1], lastI = n-1;
-  const svg = `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
-    ${gridLines}
-    <line class="axis-line" x1="${padL}" x2="${w-padR}" y1="${padT+plotH}" y2="${padT+plotH}"/>
-    <path d="${pathFor('planned')}" fill="none" class="series-planned" stroke-width="2"/>
-    <path d="${pathFor('actual')}" fill="none" class="series-actual" stroke-width="2"/>
-    <circle cx="${x(lastI)}" cy="${y(lastP.planned)}" r="3.5" fill="var(--data-cyan)"/>
-    <circle cx="${x(lastI)}" cy="${y(lastP.actual)}" r="3.5" fill="var(--hi-vis)"/>
-    <text class="axis-label mono" x="${x(lastI)-6}" y="${y(lastP.planned)-8}" text-anchor="end" fill="var(--data-cyan)">${lastP.planned}</text>
-    <text class="axis-label mono" x="${x(lastI)-6}" y="${y(lastP.actual)+14}" text-anchor="end" fill="var(--hi-vis)">${lastP.actual}</text>
-    ${xLabels}
-  </svg>`;
-  document.getElementById("scurve-chart").innerHTML = svg;
+// =====================================================================================
+// DATA SOURCE MODAL — icon-triggered popup, soft password gate.
+// Not real security: this is a public static page, so anything shipped in the page's own
+// JS (including this check) is readable via view-source and bypassable in devtools. The
+// GitHub upload links are what's actually protected, by requiring a real GitHub login with
+// write access. This gate only deters a casual visitor from wandering into the panel.
+// To change the password: run in any browser console —
+//   crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourNewPassword'))
+//     .then(b => console.log([...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join('')))
+// then paste the printed hex string in place of DATA_GATE_HASH below. Default password
+// is "construction2026".
+// =====================================================================================
+
+const DATA_GATE_HASH = "0508e1c44e2cc2ef5932206265438063809fd50ad08b5b046cbeca44e1f4447a";
+let dataUnlocked = false;
+
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function showDataModalContent(){
+  document.getElementById("data-modal-gate").style.display = "none";
+  document.getElementById("data-modal-content").style.display = "block";
+}
+function setupDataModal(){
+  const overlay = document.getElementById("data-modal-overlay");
+  document.getElementById("data-source-btn").addEventListener("click", () => {
+    overlay.style.display = "flex";
+    if (dataUnlocked) showDataModalContent();
+  });
+  document.getElementById("data-modal-close").addEventListener("click", () => { overlay.style.display = "none"; });
+  overlay.addEventListener("click", e => { if (e.target === overlay) overlay.style.display = "none"; });
+  const pwInput = document.getElementById("data-modal-password");
+  const tryUnlock = async () => {
+    const hash = await sha256Hex(pwInput.value);
+    if (hash === DATA_GATE_HASH) {
+      dataUnlocked = true;
+      try { sessionStorage.setItem("dataUnlocked", "1"); } catch {}
+      showDataModalContent();
+    } else {
+      document.getElementById("data-modal-error").style.display = "block";
+    }
+  };
+  document.getElementById("data-modal-unlock").addEventListener("click", tryUnlock);
+  pwInput.addEventListener("keydown", e => { if (e.key === "Enter") tryUnlock(); });
+  try { if (sessionStorage.getItem("dataUnlocked") === "1") dataUnlocked = true; } catch {}
+}
+
+async function renderDataSourcePage(){
+  const tableEl = document.getElementById("data-files-table");
+  try {
+    const manifest = await (await fetch("data/manifest.json")).json();
+    document.getElementById("data-file-count").textContent = manifest.files.length + " FILES";
+    const rows = manifest.files.map(f => {
+      const ext = f.split(".").pop().toUpperCase();
+      const m = f.match(/_(\d{4}-\d{2}-\d{2})\./);
+      return `<tr><td class="pname">${f}</td><td>${ext}</td><td>${m ? m[1] : "—"}</td></tr>`;
+    }).join("");
+    tableEl.innerHTML = `<thead><tr><th>Filename</th><th>Format</th><th>Snapshot Date</th></tr></thead><tbody>${rows}</tbody>`;
+  } catch (err) {
+    tableEl.innerHTML = `<tbody><tr><td class="empty-state" colspan="3"><b>Couldn't load manifest.json</b>${err.message || err}</td></tr></tbody>`;
+  }
 }
 
 function renderExplorer(){
@@ -933,16 +900,17 @@ function renderExplorer(){
 function render(){
   document.querySelectorAll("#projectchips .chip").forEach(c => c.classList.toggle("on", c.textContent===activeProject));
   document.querySelectorAll("#statuschips .chip").forEach(c => c.classList.toggle("on", c.textContent===activeStatus));
-  renderOverviewKpis(); renderMatrix(); renderPctBars(); renderCriticalBars(); renderMilestones(); renderExplorer(); renderDetail();
+  renderOverviewKpis(); renderMatrix(); renderPctBars(); renderExplorer();
 }
 
 async function boot(){
   setupThemeToggle();
+  setupDataModal();
   try {
     const data = await loadDashboardData();
-    PROJECTS = data.PROJECTS; PORTFOLIO = data.PORTFOLIO; DCMA = data.DCMA;
-    COST_BY_TYPE = data.COST_BY_TYPE; COST_BY_PROJECT = data.COST_BY_PROJECT;
-    SCURVE = data.SCURVE; MILESTONES = data.MILESTONES; RESOURCES = data.RESOURCES; ACTIVITIES = data.ACTIVITIES;
+    PROJECTS = data.PROJECTS; PORTFOLIO = data.PORTFOLIO;
+    MILESTONES = data.MILESTONES; ACTIVITIES = data.ACTIVITIES;
+    MODEL = data.model;
     renderHeaderMeta(data.dataDate, data.sourceFormats);
   } catch (err) {
     document.getElementById("loading-overlay").innerHTML =
@@ -955,20 +923,8 @@ async function boot(){
 
   renderNav();
   renderChips();
-  renderScheduleKpis();
-  setupScurveControls();
-  renderScurve();
-  renderDcma();
-  renderCostKpis();
-  renderCostBars();
-  renderCostByProject();
-  renderDonut();
-  renderResourceKpis();
-  renderResourceBars();
-  renderResourceTable();
-  setupDetailControls();
-  renderSlippage();
-  renderActions();
+  setupScopeBar();
+  renderAllAspects();
   renderDataSourcePage();
   render();
   switchTab("sec-overview");

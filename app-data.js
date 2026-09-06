@@ -760,11 +760,11 @@ const KPI_REGISTRY = [
   { id: "resource_utilization", aspect: "resources", name: "Avg Resource Utilization", shortName: "Utilization",
     definition: "Actual vs. budgeted units, averaged across resources with assignment data in scope.",
     formula: n => n.avgUtilization, unit: "pct", decimals: 0, target: 0.85, direction: "higher-better",
-    rag: { green: 0.7, amber: 0.5 }, levels: ["portfolio", "project"], isHeadline: true },
+    rag: { green: 0.7, amber: 0.5 }, levels: ["portfolio", "project", "wbs"], isHeadline: true },
   { id: "over_allocated_count", aspect: "resources", name: "Over-Allocated Resources", shortName: "Over-Allocated",
     definition: "Resources where actual units consumed exceed budgeted units.",
     formula: n => n.overAllocatedCount, unit: "count", decimals: 0, target: 0, direction: "lower-better",
-    rag: { green: 0, amber: 2 }, levels: ["portfolio", "project"], isHeadline: false },
+    rag: { green: 0, amber: 2 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
 
   // ---- risk: what's at risk? ----
   { id: "neg_float_count", aspect: "risk", name: "Negative-Float Activities", shortName: "Neg. Float",
