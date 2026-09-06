@@ -7,7 +7,54 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* Light palette (default) — drafting-table paper, navy ink; ties to the P6 Controls Playbook's light theme */
   :root{
+    --bp-navy: #E2E6DA;
+    --bp-navy-deep: #EEF1EA;
+    --bp-panel: #FFFFFF;
+    --bp-panel-hi: #F6F7F2;
+    --bp-panel-line: #C7D0C4;
+    --bp-line: #A9B5A5;
+    --bp-line-faint: rgba(36,71,107,0.06);
+    --paper: #1C231F;
+    --paper-dim: #57655C;
+    --hi-vis: #C1550E;
+    --hi-vis-dim: rgba(193,85,14,0.12);
+    --status-green: #3F8467;
+    --status-green-dim: rgba(63,132,103,0.12);
+    --status-amber: #A87A1E;
+    --status-amber-dim: rgba(168,122,30,0.12);
+    --data-cyan: #24476B;
+    --data-cyan-dim: rgba(36,71,107,0.10);
+    --row-hover: rgba(36,71,107,0.05);
+    --na-tint: rgba(87,101,92,0.08);
+    --radius: 3px;
+  }
+  /* Dark palette — the original navy blueprint aesthetic */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bp-navy: #122436;
+      --bp-navy-deep: #0C1C2A;
+      --bp-panel: #1B3A54;
+      --bp-panel-hi: #16324A;
+      --bp-panel-line: #2E5878;
+      --bp-line: #3E6E90;
+      --bp-line-faint: rgba(122,168,201,0.14);
+      --paper: #F1EDE1;
+      --paper-dim: #A9BAC7;
+      --hi-vis: #E86A1C;
+      --hi-vis-dim: rgba(232,106,28,0.16);
+      --status-green: #5FA982;
+      --status-green-dim: rgba(95,169,130,0.16);
+      --status-amber: #D8AC52;
+      --status-amber-dim: rgba(216,172,82,0.16);
+      --data-cyan: #7FC4DC;
+      --data-cyan-dim: rgba(127,196,220,0.14);
+      --row-hover: rgba(127,196,220,0.05);
+      --na-tint: rgba(122,168,201,0.1);
+    }
+  }
+  :root[data-theme="dark"]{
     --bp-navy: #122436;
     --bp-navy-deep: #0C1C2A;
     --bp-panel: #1B3A54;
@@ -25,7 +72,8 @@
     --status-amber-dim: rgba(216,172,82,0.16);
     --data-cyan: #7FC4DC;
     --data-cyan-dim: rgba(127,196,220,0.14);
-    --radius: 3px;
+    --row-hover: rgba(127,196,220,0.05);
+    --na-tint: rgba(122,168,201,0.1);
   }
   *{ box-sizing: border-box; }
   html{ -webkit-text-size-adjust: 100%; }
@@ -99,6 +147,7 @@
   /* ===== KPI cards ===== */
   .kpirow{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
   .kpirow.five{ grid-template-columns: repeat(5, 1fr); }
+  .kpirow.six{ grid-template-columns: repeat(6, 1fr); }
   .kpi{ background: var(--bp-panel); border: 1px solid var(--bp-panel-line); border-radius: var(--radius); padding: 15px 17px; position: relative; overflow: hidden; min-width: 0; }
   .kpi::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--kpi-accent, var(--data-cyan)); }
   .kpi .label{ font-family:'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--paper-dim); margin-bottom: 9px; }
@@ -107,6 +156,17 @@
   .kpi .sub{ margin-top: 8px; font-size: 10.5px; color: var(--paper-dim); }
   .kpi.warn{ --kpi-accent: var(--hi-vis); } .kpi.warn .value{ color: var(--hi-vis); }
   .kpi.ok{ --kpi-accent: var(--status-green); } .kpi.ok .value{ color: var(--status-green); }
+  .kpi.watch{ --kpi-accent: var(--status-amber); } .kpi.watch .value{ color: var(--status-amber); }
+
+  /* ===== Gauges ===== */
+  .gauge-row{ display:flex; gap: 18px; flex-wrap: wrap; justify-content: space-around; margin-bottom: 4px; }
+  .gauge-wrap{ display:flex; flex-direction:column; align-items:center; min-width: 130px; }
+  .gauge-svg{ width: 150px; height: auto; display:block; }
+  .gauge-note{ margin-top: 6px; font-size: 10.5px; color: var(--paper-dim); text-align:center; }
+
+  /* ===== Empty state ===== */
+  .empty-state{ padding: 2.4rem 1rem; text-align:center; color: var(--paper-dim); font-size: 12px; }
+  .empty-state b{ display:block; color: var(--paper); font-size: 13px; margin-bottom: 6px; font-family:'Space Grotesk', sans-serif; font-weight: 600; }
 
   /* ===== Grids / panels ===== */
   .maingrid{ display:grid; grid-template-columns: 1.35fr 1fr; gap: 16px; margin-bottom: 24px; align-items: start; }
@@ -122,14 +182,14 @@
   th.num, td.num{ text-align: right; }
   td{ font-family:'JetBrains Mono', monospace; font-size: 11.5px; padding: 9px 8px; border-bottom: 1px solid var(--bp-line-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
   td.pname{ font-family:'Space Grotesk', sans-serif; font-weight: 500; font-size: 12px; white-space: normal; }
-  tr:hover td{ background: rgba(127,196,220,0.05); }
+  tr:hover td{ background: var(--row-hover); }
 
   .pill{ display:inline-block; font-family:'JetBrains Mono', monospace; font-size: 10px; padding: 2px 8px; border-radius: 10px; }
   .pill.green{ background: var(--status-green-dim); color: var(--status-green); }
   .pill.amber{ background: var(--status-amber-dim); color: var(--status-amber); }
   .pill.orange{ background: var(--hi-vis-dim); color: var(--hi-vis); }
   .pill.cyan{ background: var(--data-cyan-dim); color: var(--data-cyan); }
-  .pill.na{ background: rgba(122,168,201,0.1); color: var(--bp-line); }
+  .pill.na{ background: var(--na-tint); color: var(--paper-dim); }
 
   .bar-row{ margin-bottom: 14px; } .bar-row:last-child{ margin-bottom: 2px; }
   .bar-label{ display:flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 6px; gap: 8px; }
@@ -186,7 +246,7 @@
   .tb-cell .tb-value{ font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--paper); overflow: hidden; text-overflow: ellipsis; }
 
   @media (max-width: 760px){
-    .kpirow, .kpirow.five{ grid-template-columns: repeat(2, 1fr); }
+    .kpirow, .kpirow.five, .kpirow.six{ grid-template-columns: repeat(2, 1fr); }
     .maingrid, .maingrid.even, .maingrid.thirds{ grid-template-columns: 1fr; }
     .dcmagrid{ grid-template-columns: repeat(2, 1fr); }
     .titleblock{ grid-template-columns: 1fr 1fr; }
@@ -198,7 +258,7 @@
     .tb-cell:nth-child(4), .tb-cell:nth-child(5){ display:none; }
   }
   @media (max-width: 420px){
-    .kpirow, .kpirow.five{ grid-template-columns: 1fr 1fr; }
+    .kpirow, .kpirow.five, .kpirow.six{ grid-template-columns: 1fr 1fr; }
     .kpi .value{ font-size: 23px; }
     .titlestrip h1{ font-size: 19px; }
   }
@@ -280,6 +340,7 @@
     <section class="content" id="sec-cost">
       <p class="sectionlabel">04 · Cost &amp; Resources <span class="hint">EGP, resource detail currently CairoHQ only</span></p>
       <div class="kpirow" id="kpi-cost"></div>
+      <div class="kpirow" id="kpi-cost-ev" style="margin-top:-10px;"></div>
       <div class="maingrid thirds">
         <div class="panel">
           <h2>Budgeted vs Actual <span class="tag">BY TYPE</span></h2>
@@ -312,8 +373,44 @@
       <div class="legend-note">Utilization = actual units consumed against each resource's budgeted (planned) allocation across all its assignments — a proxy for over/under-allocation. A true load-vs-capacity histogram (assigned hours against each trade's calendar peak) needs a resource calendar/capacity table not yet in the source data.</div>
     </section>
 
+    <section class="content" id="sec-detail">
+      <p class="sectionlabel">06 · Project Detail <span class="hint">select a project — CPI/SPI shown where cost data exists</span></p>
+      <div class="daterange" style="margin-bottom:22px;">
+        <span class="slabel">Project</span>
+        <select class="mono" id="detail-project-select"></select>
+      </div>
+      <div class="panel" style="margin-bottom:16px;">
+        <h2 id="detail-heading">— <span class="tag">HEADLINE INDICATORS</span></h2>
+        <div class="gauge-row" id="detail-gauges"></div>
+      </div>
+      <div class="maingrid even">
+        <div class="panel">
+          <h2>Schedule &amp; Float <span class="tag">CURRENT SNAPSHOT</span></h2>
+          <div id="detail-stats"></div>
+        </div>
+        <div class="panel">
+          <h2>Milestones <span class="tag">THIS PROJECT</span></h2>
+          <div class="tablewrap"><table id="detail-milestones"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content" id="sec-slippage">
+      <p class="sectionlabel">07 · Slippage <span class="hint">EAC/ETC live now — variance vs. plan pending baseline</span></p>
+      <div class="kpirow" id="kpi-slippage"></div>
+      <div class="legend-note">Schedule Variance (EGP) and Cost Variance (EGP) use Planned Value approximated by spreading each activity's budgeted cost linearly across its own early-date span — not a true baseline. <b style="color:var(--paper)">Progress Variance %</b> (actual vs. baseline-planned % complete) stays blank until a baseline XER/XML is imported per project — same requirement as DCMA checks 11, 13 &amp; 14.</div>
+    </section>
+
+    <section class="content" id="sec-actions">
+      <p class="sectionlabel">08 · Issues &amp; Actions <span class="hint">manually maintained — not derived from P6 data</span></p>
+      <div class="panel">
+        <h2>Open Items <span class="tag">OWNER · TARGET · STATUS</span></h2>
+        <div class="tablewrap"><table id="actions-table"></table></div>
+      </div>
+    </section>
+
     <section class="content" id="sec-explorer">
-      <p class="sectionlabel">06 · Activity Explorer <span class="hint" id="explorer-count"></span></p>
+      <p class="sectionlabel">09 · Activity Explorer <span class="hint" id="explorer-count"></span></p>
       <div class="chiprow" id="statuschips"><span class="slabel">Status</span></div>
       <div class="panel" style="margin-bottom: 26px;">
         <div class="tablewrap" style="max-height: 560px; overflow-y: auto;"><table id="explorer-table"></table></div>
@@ -323,7 +420,7 @@
 
   <div class="titleblock">
     <div class="tb-cell"><div class="tb-label">Project</div><div class="tb-value">Planning Dept — Portfolio Dashboard</div></div>
-    <div class="tb-cell"><div class="tb-label">Sheet</div><div class="tb-value">01 OF 06</div></div>
+    <div class="tb-cell"><div class="tb-label">Sheet</div><div class="tb-value">01 OF 09</div></div>
     <div class="tb-cell"><div class="tb-label">Data Date</div><div class="tb-value">16-AUG-2026</div></div>
     <div class="tb-cell"><div class="tb-label">Source</div><div class="tb-value">XLSX · XER · XML</div></div>
     <div class="tb-cell"><div class="tb-label">Status</div><div class="tb-value" style="color:var(--data-cyan)">SNAPSHOT — NOT LIVE</div></div>
@@ -345,15 +442,22 @@
 let PROJECTS = [], PORTFOLIO = {}, DCMA = [], COST_BY_TYPE = [], COST_BY_PROJECT = [],
     SCURVE = [], MILESTONES = [], RESOURCES = [], ACTIVITIES = [];
 
+// Issues & Actions is a manually maintained decision log, not derived from P6 schedule data —
+// same category as RFI/MIR status and material tracking. Starts empty; add rows as issues arise.
+const ISSUES = [];
+
 const SECTIONS = [
   {id:"sec-overview", label:"01 · Portfolio Overview"},
   {id:"sec-schedule", label:"02 · Schedule Performance"},
   {id:"sec-dcma", label:"03 · Schedule Health"},
   {id:"sec-cost", label:"04 · Cost & Resources"},
   {id:"sec-resources", label:"05 · Resource Utilization"},
-  {id:"sec-explorer", label:"06 · Activity Explorer"},
+  {id:"sec-detail", label:"06 · Project Detail"},
+  {id:"sec-slippage", label:"07 · Slippage"},
+  {id:"sec-actions", label:"08 · Issues & Actions"},
+  {id:"sec-explorer", label:"09 · Activity Explorer"},
 ];
-const CAT_COLORS = ["#7FC4DC", "#3E6E90", "#A9BAC7", "#D8AC52"];
+const CAT_COLORS = ["var(--data-cyan)", "var(--bp-line)", "var(--paper-dim)", "var(--status-amber)"];
 
 const fmtPct = v => (v*100).toFixed(1) + "%";
 const fmtMoney = v => "EGP " + Math.round(v).toLocaleString("en-US");
@@ -362,6 +466,33 @@ const statusPill = s => `<span class="pill ${s==="Complete"?"green":s==="In Prog
 const pctPill = pct => `<span class="pill ${pct>=0.85?"green":pct>=0.6?"amber":"orange"}">${(pct*100).toFixed(0)}%</span>`;
 const resUtil = r => (r.budgetedUnits==null || r.budgetedUnits===0) ? null : r.actualUnits / r.budgetedUnits;
 const utilPill = u => u===null ? '<span class="pill na">N/A</span>' : `<span class="pill ${u>1?'orange':u>=0.7?'green':'amber'}">${(u*100).toFixed(0)}%</span>`;
+const ratioColor = v => v==null ? "var(--paper-dim)" : v>=1 ? "var(--status-green)" : v>=0.9 ? "var(--status-amber)" : "var(--hi-vis)";
+const ratioClass = v => v==null ? "" : v>=1 ? "ok" : v>=0.9 ? "watch" : "warn";
+
+// Semicircle gauge. frac: 0-1 (already normalized by the caller) or null for "no data".
+function svgGauge({frac, display, label, color}){
+  const w=160, h=104, cx=80, cy=90, r=68;
+  const pt = (rad,ang) => [cx + rad*Math.cos(ang), cy - rad*Math.sin(ang)];
+  const [x0,y0] = pt(r, Math.PI), [x1,y1] = pt(r, 0);
+  const bgArc = `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+  let fillArcSvg = "";
+  if (frac !== null) {
+    const clamped = Math.max(0, Math.min(1, frac));
+    if (clamped > 0.004) {
+      const ang = Math.PI - clamped*Math.PI;
+      const [xf,yf] = pt(r, ang);
+      const largeArc = clamped > 0.5 ? 1 : 0;
+      fillArcSvg = `<path d="M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 ${largeArc} 1 ${xf.toFixed(1)} ${yf.toFixed(1)}" fill="none" style="stroke:${color}" stroke-width="13" stroke-linecap="round"/>`;
+    }
+  }
+  const valueColor = frac===null ? "var(--paper-dim)" : color;
+  return `<svg viewBox="0 0 ${w} ${h}" class="gauge-svg" role="img" aria-label="${label}: ${display}">
+    <path d="${bgArc}" fill="none" stroke="var(--bp-panel-line)" stroke-width="13" stroke-linecap="round"/>
+    ${fillArcSvg}
+    <text x="${cx}" y="${cy-6}" text-anchor="middle" class="mono" style="font-size:20px;font-weight:700;fill:${valueColor}">${display}</text>
+    <text x="${cx}" y="${h-2}" text-anchor="middle" class="mono" style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;fill:var(--paper-dim)">${label}</text>
+  </svg>`;
+}
 
 let activeProject = "All";
 let activeStatus = "All";
@@ -491,6 +622,14 @@ function renderCostKpis(){
     <div class="kpi ${PORTFOLIO.costVar<0?'ok':'warn'}"><div class="label">Cost Variance</div><div class="value">${(PORTFOLIO.costVar*100).toFixed(1)}<small>%</small></div><div class="sub">${PORTFOLIO.costVar<0?"Under budget":"Over budget"}</div></div>
     <div class="kpi"><div class="label">Distinct Resources</div><div class="value">${PORTFOLIO.distinctRes}</div><div class="sub">Tracked, CairoHQ</div></div>
   `;
+  if (PORTFOLIO.cpi == null) { document.getElementById("kpi-cost-ev").innerHTML = ""; return; }
+  const eacOver = PORTFOLIO.eac > PORTFOLIO.budgCost;
+  document.getElementById("kpi-cost-ev").innerHTML = `
+    <div class="kpi ${ratioClass(PORTFOLIO.cpi)}"><div class="label">CPI</div><div class="value">${PORTFOLIO.cpi.toFixed(2)}</div><div class="sub">Earned ÷ Actual cost</div></div>
+    <div class="kpi ${ratioClass(PORTFOLIO.spi)}"><div class="label">SPI</div><div class="value">${PORTFOLIO.spi!=null?PORTFOLIO.spi.toFixed(2):"N/A"}</div><div class="sub">Earned ÷ Planned value</div></div>
+    <div class="kpi ${eacOver?'warn':'ok'}"><div class="label">EAC</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.eac)}</div><div class="sub">${eacOver?"Forecast over budget":"Forecast within budget"}</div></div>
+    <div class="kpi"><div class="label">ETC</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.etc)}</div><div class="sub">Remaining cost to complete</div></div>
+  `;
 }
 function renderCostBars(){
   const max = Math.max(...COST_BY_TYPE.map(c=>Math.max(c.budgeted,c.actual)));
@@ -513,7 +652,7 @@ function renderDonut(){
   const segs = COST_BY_TYPE.map((c,i) => {
     const frac = c.actual/total;
     const dash = frac*circ;
-    const seg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${CAT_COLORS[i]}" stroke-width="16" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    const seg = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" style="stroke:${CAT_COLORS[i]}" stroke-width="16" stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
     offset += dash;
     return seg;
   }).join("");
@@ -554,6 +693,64 @@ function renderResourceTable(){
     return `<tr><td class="pname">${r.name}</td><td>${r.type}</td><td class="num">${r.budgetedUnits ?? "—"}</td><td class="num">${r.actualUnits ?? "—"}</td><td class="num">${utilPill(u)}</td><td class="num">${r.budgetedCost!=null?fmtMoney(r.budgetedCost):"—"}</td><td class="num">${r.actualCost!=null?fmtMoney(r.actualCost):"—"}</td></tr>`;
   }).join("");
   document.getElementById("resource-table").innerHTML = `<thead><tr><th>Resource</th><th>Type</th><th class="num">Budg. Units</th><th class="num">Actual Units</th><th class="num">Utilization</th><th class="num">Budgeted Cost</th><th class="num">Actual Cost</th></tr></thead><tbody>${rows}</tbody>`;
+}
+
+// ===== 06 · Project Detail =====
+// CPI/SPI come from each project's own EV/PV (app-data.js) — null (shown as N/A) for a
+// project with no cost/resource assignment data, same scoping as Cost & Resources.
+function setupDetailControls(){
+  const sel = document.getElementById("detail-project-select");
+  sel.innerHTML = PROJECTS.map(p => `<option value="${p.name}">${p.name}</option>`).join("");
+  sel.addEventListener("change", () => { activeProject = sel.value; render(); });
+}
+function renderDetail(){
+  if (!PROJECTS.length) return;
+  const p = PROJECTS.find(x => x.name === activeProject) || PROJECTS[0];
+  const sel = document.getElementById("detail-project-select");
+  if (sel && sel.value !== p.name) sel.value = p.name;
+  document.getElementById("detail-heading").innerHTML = `${p.name} <span class="tag">HEADLINE INDICATORS</span>`;
+
+  const hasCost = p.cpi != null;
+  document.getElementById("detail-gauges").innerHTML = `
+    <div class="gauge-wrap">${svgGauge({frac: p.pctComplete, display: (p.pctComplete*100).toFixed(0)+"%", label:"% Complete", color:"var(--data-cyan)"})}</div>
+    <div class="gauge-wrap">${svgGauge({frac: p.cpi!=null ? Math.min(p.cpi,1.2)/1.2 : null, display: p.cpi!=null ? p.cpi.toFixed(2) : "N/A", label:"CPI", color: ratioColor(p.cpi)})}<div class="gauge-note">${hasCost?"":"No cost data for this project"}</div></div>
+    <div class="gauge-wrap">${svgGauge({frac: p.spi!=null ? Math.min(p.spi,1.2)/1.2 : null, display: p.spi!=null ? p.spi.toFixed(2) : "N/A", label:"SPI", color: ratioColor(p.spi)})}<div class="gauge-note">${hasCost?"":"No cost data for this project"}</div></div>
+  `;
+
+  const pActivities = ACTIVITIES.filter(a => a.project === p.name);
+  const floats = pActivities.map(a => a.float);
+  const avgFloat = floats.length ? floats.reduce((s,f)=>s+f,0)/floats.length : 0;
+  document.getElementById("detail-stats").innerHTML = `
+    <div class="bar-row"><div class="bar-label"><span class="name">Critical Activities</span><span class="pct">${p.critical} / ${p.total}</span></div><div class="bar-track"><div class="bar-fill low" style="width:${(p.critical/p.total*100).toFixed(0)}%"></div></div></div>
+    <div class="bar-row"><div class="bar-label"><span class="name">Avg Total Float</span><span class="pct">${avgFloat.toFixed(1)}d</span></div></div>
+    <div class="bar-row"><div class="bar-label"><span class="name">Progress Variance %</span><span class="pct"><span class="pill na">Pending baseline</span></span></div></div>
+  `;
+  const pms = MILESTONES.filter(m => m.project === p.name);
+  const rows = pms.map(m => `<tr><td class="pname">${m.name}</td><td>${statusPill(m.status)}</td><td>${fmtDate(m.date)}</td></tr>`).join("");
+  document.getElementById("detail-milestones").innerHTML = `<thead><tr><th>Milestone</th><th>Status</th><th>Date</th></tr></thead><tbody>${rows || '<tr><td colspan="3" style="color:var(--paper-dim)">No milestones logged.</td></tr>'}</tbody>`;
+}
+
+// ===== 07 · Slippage =====
+function renderSlippage(){
+  if (PORTFOLIO.cpi == null) {
+    document.getElementById("kpi-slippage").innerHTML = `<div class="empty-state" style="grid-column:1/-1"><b>No cost/assignment data yet</b>EAC, ETC and variance need at least one project with resource assignments.</div>`;
+    return;
+  }
+  const svEGP = PORTFOLIO.scheduleVarianceEGP, cvEGP = PORTFOLIO.costVarianceEGP;
+  document.getElementById("kpi-slippage").innerHTML = `
+    <div class="kpi ${PORTFOLIO.eac>PORTFOLIO.budgCost?'warn':'ok'}"><div class="label">EAC</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.eac)}</div><div class="sub">Estimate at completion</div></div>
+    <div class="kpi"><div class="label">ETC</div><div class="value" style="font-size:20px">${fmtMoney(PORTFOLIO.etc)}</div><div class="sub">Remaining cost to complete</div></div>
+    <div class="kpi ${svEGP<0?'warn':'ok'}"><div class="label">Schedule Variance</div><div class="value" style="font-size:18px">${fmtMoney(svEGP)}</div><div class="sub">EV − PV (approx.)</div></div>
+    <div class="kpi ${cvEGP<0?'warn':'ok'}"><div class="label">Cost Variance</div><div class="value" style="font-size:18px">${fmtMoney(cvEGP)}</div><div class="sub">EV − AC</div></div>
+  `;
+}
+
+// ===== 08 · Issues & Actions =====
+function renderActions(){
+  const rows = ISSUES.map(i => `<tr><td class="pname">${i.issue}</td><td>${i.project}</td><td>${i.owner}</td><td>${fmtDate(i.target)}</td><td>${statusPill(i.status)}</td></tr>`).join("");
+  document.getElementById("actions-table").innerHTML = ISSUES.length
+    ? `<thead><tr><th>Issue</th><th>Project</th><th>Owner</th><th>Target</th><th>Status</th></tr></thead><tbody>${rows}</tbody>`
+    : `<tbody><tr><td class="empty-state" colspan="5"><b>No open issues logged</b>This page is meant to hold what the schedule alone can't tell you — decisions blocked on someone, recovery actions, delay claims in progress. Add rows to the ISSUES array in the page source (owner, issue, target date, status) as they come up.</td></tr></tbody>`;
 }
 
 let scurveYear = null, scurveFrom = 0, scurveTo = 0;
@@ -636,7 +833,7 @@ function renderExplorer(){
 function render(){
   document.querySelectorAll("#projectchips .chip").forEach(c => c.classList.toggle("on", c.textContent===activeProject));
   document.querySelectorAll("#statuschips .chip").forEach(c => c.classList.toggle("on", c.textContent===activeStatus));
-  renderOverviewKpis(); renderMatrix(); renderPctBars(); renderCriticalBars(); renderMilestones(); renderExplorer();
+  renderOverviewKpis(); renderMatrix(); renderPctBars(); renderCriticalBars(); renderMilestones(); renderExplorer(); renderDetail();
 }
 
 async function boot(){
@@ -667,6 +864,9 @@ async function boot(){
   renderResourceKpis();
   renderResourceBars();
   renderResourceTable();
+  setupDetailControls();
+  renderSlippage();
+  renderActions();
   render();
   switchTab("sec-overview");
 

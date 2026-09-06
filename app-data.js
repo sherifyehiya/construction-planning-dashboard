@@ -319,8 +319,38 @@ function computeDashboardData(model) {
   };
 
   // ----- per-project rollup (mirrors the PROJECTS table in the web app) -----
+  const projEvPv = (acts, snap) => {
+    const keys = new Set(acts.map(a => a.ActivityKey));
+    const asg = assignments.filter(a => keys.has(a.ActivityKey));
+    if (!asg.length) return { ev: null, cpi: null, spi: null };
+    const budByAct = {};
+    asg.forEach(a => { budByAct[a.ActivityKey] = (budByAct[a.ActivityKey] || 0) + a.BudgetedCost; });
+    const ev = asg.reduce((s, a) => {
+      const act = activityByKey[a.ActivityKey];
+      return s + (act ? (act.PercentComplete / 100) * a.BudgetedCost : 0);
+    }, 0);
+    const actualCost = asg.reduce((s, a) => s + a.ActualCost, 0);
+    let pv = null;
+    if (snap) {
+      pv = acts.reduce((s, a) => {
+        const budCost = budByAct[a.ActivityKey];
+        if (!budCost) return s;
+        let frac;
+        if (a.ActivityType === "Milestone") frac = (a.EarlyFinish && a.EarlyFinish <= snap) ? 1 : 0;
+        else if (!a.EarlyStart) frac = 0;
+        else {
+          const dur = a.EarlyFinish ? (a.EarlyFinish - a.EarlyStart) / 86400000 : 0;
+          const elapsed = (snap - a.EarlyStart) / 86400000;
+          frac = dur > 0 ? Math.max(0, Math.min(1, elapsed / dur)) : (a.EarlyStart <= snap ? 1 : 0);
+        }
+        return s + frac * budCost;
+      }, 0);
+    }
+    return { ev, cpi: actualCost ? ev / actualCost : null, spi: pv ? ev / pv : null };
+  };
   const PROJECTS = projects.map(p => {
     const acts = activities.filter(a => a.ProjectKey === p.ProjectKey);
+    const evPv = projEvPv(acts, p.SnapshotDate);
     return {
       name: p.ProjectName,
       complete: acts.filter(a => a.Status === "Complete").length,
@@ -328,7 +358,8 @@ function computeDashboardData(model) {
       notStarted: acts.filter(a => a.Status === "Not Started").length,
       critical: acts.filter(a => a.IsCritical === "Y").length,
       total: acts.length,
-      pctComplete: weightedComplete(acts)
+      pctComplete: weightedComplete(acts),
+      cpi: evPv.cpi, spi: evPv.spi
     };
   }).filter(p => p.total > 0);
 
@@ -346,6 +377,39 @@ function computeDashboardData(model) {
   const totalActual = assignments.reduce((s, a) => s + a.ActualCost, 0);
   const distinctResources = new Set(resources.map(r => r.ResourceKey)).size;
 
+  // ----- earned value (EV/PV/CPI/SPI/EAC/ETC) -----
+  // Mirrors the DAX added to the Power BI model: EV = % complete x that activity's budgeted
+  // cost; PV = budgeted cost spread linearly across each activity's own early-date span, up to
+  // the project's snapshot (data) date — an approximation, not a true baseline-driven Planned
+  // Value (no baseline import exists yet; see Slippage page note).
+  const activityBudgetedCost = {};
+  assignments.forEach(a => { activityBudgetedCost[a.ActivityKey] = (activityBudgetedCost[a.ActivityKey] || 0) + a.BudgetedCost; });
+  const ev = assignments.reduce((s, a) => {
+    const act = activityByKey[a.ActivityKey];
+    return s + (act ? (act.PercentComplete / 100) * a.BudgetedCost : 0);
+  }, 0);
+  const pv = activities.reduce((s, a) => {
+    const budCost = activityBudgetedCost[a.ActivityKey];
+    if (!budCost) return s;
+    const snap = projByKey[a.ProjectKey] && projByKey[a.ProjectKey].SnapshotDate;
+    if (!snap) return s;
+    let frac;
+    if (a.ActivityType === "Milestone") {
+      frac = (a.EarlyFinish && a.EarlyFinish <= snap) ? 1 : 0;
+    } else if (!a.EarlyStart) {
+      frac = 0;
+    } else {
+      const dur = a.EarlyFinish ? (a.EarlyFinish - a.EarlyStart) / 86400000 : 0;
+      const elapsed = (snap - a.EarlyStart) / 86400000;
+      frac = dur > 0 ? Math.max(0, Math.min(1, elapsed / dur)) : (a.EarlyStart <= snap ? 1 : 0);
+    }
+    return s + frac * budCost;
+  }, 0);
+  const cpi = totalActual ? ev / totalActual : null;
+  const spi = pv ? ev / pv : null;
+  const eac = cpi ? totalActual + (totalBudgeted - ev) / cpi : null;
+  const etc = eac != null ? eac - totalActual : null;
+
   const PORTFOLIO = {
     projects: PROJECTS.length,
     activities: activityCount,
@@ -361,7 +425,10 @@ function computeDashboardData(model) {
     budgCost: totalBudgeted,
     actCost: totalActual,
     costVar: totalBudgeted ? (totalActual - totalBudgeted) / totalBudgeted : 0,
-    distinctRes: distinctResources
+    distinctRes: distinctResources,
+    ev, pv, cpi, spi, eac, etc,
+    scheduleVarianceEGP: ev - pv,
+    costVarianceEGP: ev - totalActual
   };
 
   // ----- DCMA 14-point check -----
