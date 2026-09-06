@@ -341,6 +341,22 @@
 
     <section class="content" id="sec-asp-schedule">
       <p class="sectionlabel">02 · Schedule <span class="hint">on time?</span></p>
+      <div class="panel" style="margin-bottom:16px;">
+        <h2>Planned vs. Actual Completions <span class="tag">CUMULATIVE, PORTFOLIO-WIDE</span></h2>
+        <div class="chart-legend">
+          <span class="item"><span class="swatch" style="background:var(--data-cyan)"></span>Planned (by early finish)</span>
+          <span class="item"><span class="swatch" style="background:var(--hi-vis)"></span>Actual (completed)</span>
+        </div>
+        <div class="daterange" id="scurve-range">
+          <span class="slabel">Year</span>
+          <select class="mono" id="scurve-year"></select>
+          <span class="slabel">From</span>
+          <select class="mono" id="scurve-from"></select>
+          <span class="slabel">To</span>
+          <select class="mono" id="scurve-to"></select>
+        </div>
+        <div id="scurve-chart"></div>
+      </div>
       <div class="aspect-mount" data-aspect="schedule"></div>
     </section>
 
@@ -355,9 +371,10 @@
     </section>
 
     <section class="content" id="sec-asp-integrity">
-      <p class="sectionlabel">05 · Integrity <span class="hint">trust the plan? — DCMA-style checks, scoped</span></p>
+      <p class="sectionlabel">05 · Integrity <span class="hint">trust the plan? — DCMA 14-point check, scoped</span></p>
+      <div class="dcmagrid" id="dcma-full-grid"></div>
+      <div class="legend-note">Checks 5, 11, 13 &amp; 14 (hard constraints, missed tasks vs. baseline, CPLI, BEI) need constraint or baseline data not present in the current snapshot(s) — they'll activate once that data lands. Unlike the old portfolio-only DCMA panel, this grid respects the scope selector above.</div>
       <div class="aspect-mount" data-aspect="integrity"></div>
-      <div class="legend-note">DCMA checks 5, 11, 13 &amp; 14 (hard constraints, missed tasks, CPLI, BEI) need constraint or baseline data not present in the current snapshot(s) and aren't in this registry yet — they'll activate once that data lands.</div>
     </section>
 
     <section class="content" id="sec-asp-resources">
@@ -441,7 +458,7 @@
 <script src="lib/xlsx.mini.min.js"></script>
 <script src="app-data.js"></script>
 <script>
-let PROJECTS = [], PORTFOLIO = {}, MILESTONES = [], ACTIVITIES = [], MODEL = null;
+let PROJECTS = [], PORTFOLIO = {}, MILESTONES = [], ACTIVITIES = [], SCURVE = [], MODEL = null;
 
 // Issues & Actions is a manually maintained decision log, not derived from P6 schedule data —
 // same category as RFI/MIR status and material tracking. Starts empty; add rows as issues arise.
@@ -491,6 +508,108 @@ function svgGauge({frac, display, label, color}){
     <text x="${cx}" y="${cy-6}" text-anchor="middle" class="mono" style="font-size:20px;font-weight:700;fill:${valueColor}">${display}</text>
     <text x="${cx}" y="${h-2}" text-anchor="middle" class="mono" style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;fill:var(--paper-dim)">${label}</text>
   </svg>`;
+}
+
+// ===== S-curve (planned vs. actual completions) — portfolio-wide, not affected by the
+// scope breadcrumb; a true per-scope S-curve needs SCURVE rebuilt from rollup() per month,
+// which isn't built yet. =====
+let scurveYear = null, scurveFrom = 0, scurveTo = 0;
+
+function setupScurveControls(){
+  const years = [...new Set(SCURVE.map(d => d.y))];
+  scurveYear = years[0];
+  const yearSel = document.getElementById("scurve-year");
+  yearSel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join("");
+  yearSel.addEventListener("change", () => {
+    scurveYear = Number(yearSel.value);
+    const months = SCURVE.filter(d => d.y === scurveYear);
+    scurveFrom = 0; scurveTo = months.length - 1;
+    populateMonthSelects(months);
+    renderScurve();
+  });
+
+  const months = SCURVE.filter(d => d.y === scurveYear);
+  scurveFrom = 0; scurveTo = months.length - 1;
+  populateMonthSelects(months);
+
+  document.getElementById("scurve-from").addEventListener("change", e => {
+    scurveFrom = Number(e.target.value);
+    if (scurveFrom > scurveTo) scurveTo = scurveFrom;
+    document.getElementById("scurve-to").value = scurveTo;
+    renderScurve();
+  });
+  document.getElementById("scurve-to").addEventListener("change", e => {
+    scurveTo = Number(e.target.value);
+    if (scurveTo < scurveFrom) scurveFrom = scurveTo;
+    document.getElementById("scurve-from").value = scurveFrom;
+    renderScurve();
+  });
+}
+function populateMonthSelects(months){
+  const opts = months.map((d,i) => `<option value="${i}">${d.m}</option>`).join("");
+  document.getElementById("scurve-from").innerHTML = opts;
+  document.getElementById("scurve-to").innerHTML = opts;
+  document.getElementById("scurve-from").value = scurveFrom;
+  document.getElementById("scurve-to").value = scurveTo;
+}
+
+function renderScurve(){
+  const data = SCURVE.filter(d => d.y === scurveYear).slice(scurveFrom, scurveTo + 1);
+  const w = 900, h = 240, padL = 34, padR = 14, padT = 14, padB = 26;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const maxY = Math.max(10, Math.ceil(Math.max(...data.map(d => Math.max(d.planned, d.actual))) / 10) * 10);
+  const n = data.length;
+  const x = i => n <= 1 ? padL : padL + (i/(n-1))*plotW;
+  const y = v => padT + plotH - (v/maxY)*plotH;
+  const pathFor = key => data.map((d,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(d[key]).toFixed(1)}`).join(" ");
+  const step = maxY / 5;
+  const gridVals = [0,1,2,3,4,5].map(k => Math.round(step*k));
+  const gridLines = gridVals.map(v => `<line class="grid-line" x1="${padL}" x2="${w-padR}" y1="${y(v)}" y2="${y(v)}"/><text class="axis-label" x="${padL-6}" y="${y(v)+3}" text-anchor="end">${v}</text>`).join("");
+  const xLabels = data.map((d,i) => `<text class="axis-label" x="${x(i)}" y="${h-8}" text-anchor="middle">${d.m}</text>`).join("");
+  if (!n) { document.getElementById("scurve-chart").innerHTML = `<p style="color:var(--paper-dim);font-size:12px;">No data in this range.</p>`; return; }
+  const lastP = data[n-1], lastI = n-1;
+  const svg = `<svg class="chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
+    ${gridLines}
+    <line class="axis-line" x1="${padL}" x2="${w-padR}" y1="${padT+plotH}" y2="${padT+plotH}"/>
+    <path d="${pathFor('planned')}" fill="none" class="series-planned" stroke-width="2"/>
+    <path d="${pathFor('actual')}" fill="none" class="series-actual" stroke-width="2"/>
+    <circle cx="${x(lastI)}" cy="${y(lastP.planned)}" r="3.5" fill="var(--data-cyan)"/>
+    <circle cx="${x(lastI)}" cy="${y(lastP.actual)}" r="3.5" fill="var(--hi-vis)"/>
+    <text class="axis-label mono" x="${x(lastI)-6}" y="${y(lastP.planned)-8}" text-anchor="end" fill="var(--data-cyan)">${lastP.planned}</text>
+    <text class="axis-label mono" x="${x(lastI)-6}" y="${y(lastP.actual)+14}" text-anchor="end" fill="var(--hi-vis)">${lastP.actual}</text>
+    ${xLabels}
+  </svg>`;
+  document.getElementById("scurve-chart").innerHTML = svg;
+}
+
+// ===== DCMA 14-point grid — all 14 checks, 10 computed via the registry (scoped by the
+// breadcrumb, unlike the old portfolio-only panel), 4 pending baseline/constraint data. =====
+const DCMA_PENDING = {
+  5: "No constraint data in source files",
+  11: "Requires a baseline snapshot — not yet available",
+  13: "Requires baseline project finish date — not yet available",
+  14: "Requires baseline execution data — not yet available"
+};
+const DCMA_PENDING_NAMES = { 5: "Hard Constraints", 11: "Missed Tasks (Baseline)", 13: "CPLI", 14: "BEI" };
+const DCMA_ORDER = [
+  { n:1, id:"dcma_logic" }, { n:2, id:"dcma_leads" }, { n:3, id:"dcma_lags" }, { n:4, id:"dcma_nonfs" },
+  { n:5, id:null }, { n:6, id:"dcma_high_float" }, { n:7, id:"dcma_neg_float" }, { n:8, id:"dcma_high_duration" },
+  { n:9, id:"dcma_invalid_dates" }, { n:10, id:"dcma_missing_resources" }, { n:11, id:null },
+  { n:12, id:"dcma_critical_path_breaks" }, { n:13, id:null }, { n:14, id:null }
+];
+function dcmaCardHtml(entry, node){
+  if (!entry.id) {
+    return `<div class="dcma na"><div class="num">DCMA ${String(entry.n).padStart(2,"0")}</div><div><div class="val small">${DCMA_PENDING[entry.n]}</div><div class="name">${DCMA_PENDING_NAMES[entry.n]}</div></div></div>`;
+  }
+  const kpi = KPI_REGISTRY.find(k => k.id === entry.id);
+  const { display, ragCls } = evalKpi(kpi, node);
+  const statusCls = ragCls === "ok" ? "pass" : ragCls === "" ? "na" : "watch";
+  const targetStr = kpi.target != null ? ` · target ${fmtKpiRaw(kpi, kpi.target)}` : "";
+  return `<div class="dcma ${statusCls}"><div class="num">DCMA ${String(entry.n).padStart(2,"0")}</div><div><div class="val">${display}</div><div class="name">${kpi.name.replace(/^DCMA \d+ · /,"")}${targetStr}</div></div></div>`;
+}
+function renderDcmaGrid(node){
+  const grid = document.getElementById("dcma-full-grid");
+  if (grid) grid.innerHTML = DCMA_ORDER.map(e => dcmaCardHtml(e, node)).join("");
 }
 
 let activeProject = "All";
@@ -741,6 +860,7 @@ function renderAspect(aspectId, container){
   const scope = currentScope();
   const headline = kpis.filter(k => k.isHeadline && k.levels.includes(scope.level));
   const node = nodeWithIssues(scope.level, scope.key);
+  if (aspectId === "integrity") renderDcmaGrid(node);
 
   if (!headline.length) {
     container.innerHTML = `<div class="empty-state"><b>Nothing to show at this scope</b>This aspect's KPIs aren't defined at the ${scope.level} level.</div>`;
@@ -909,7 +1029,7 @@ async function boot(){
   try {
     const data = await loadDashboardData();
     PROJECTS = data.PROJECTS; PORTFOLIO = data.PORTFOLIO;
-    MILESTONES = data.MILESTONES; ACTIVITIES = data.ACTIVITIES;
+    MILESTONES = data.MILESTONES; ACTIVITIES = data.ACTIVITIES; SCURVE = data.SCURVE;
     MODEL = data.model;
     renderHeaderMeta(data.dataDate, data.sourceFormats);
   } catch (err) {
@@ -924,6 +1044,8 @@ async function boot(){
   renderNav();
   renderChips();
   setupScopeBar();
+  setupScurveControls();
+  renderScurve();
   renderAllAspects();
   renderDataSourcePage();
   render();

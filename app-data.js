@@ -641,7 +641,20 @@ function rollup(level, scopeKey, model) {
   const unlinkedCount = acts.filter(a => !linkedKeys.has(a.ActivityKey)).length;
   const leadsCount = relInScope.filter(r => r.Lag < 0).length;
   const lagsCount = relInScope.filter(r => r.Lag > 0).length;
+  const nonFsCount = relInScope.filter(r => r.RelationshipType !== "FS").length;
   const highFloatCount = acts.filter(a => a.TotalFloat > 44).length;
+  const highDurationCount = acts.filter(a => a.ActivityType !== "Milestone" && a.OriginalDuration > 44).length;
+  const invalidDatesCount = acts.filter(a => {
+    if (a.Status === "Complete") return false;
+    const snap = projByKey[a.ProjectKey] && projByKey[a.ProjectKey].SnapshotDate;
+    return snap && a.EarlyStart && a.EarlyStart < snap;
+  }).length;
+  const assignedActivityKeySet = new Set(asg.map(a => a.ActivityKey));
+  const missingResourcesCount = acts.filter(a => !assignedActivityKeySet.has(a.ActivityKey)).length;
+  const criticalPathBreaks = relInScope.reduce((s, r) => {
+    const pred = activityByKey[r.PredecessorActivityKey], succ = activityByKey[r.SuccessorActivityKey];
+    return (pred && succ && pred.IsCritical === "Y" && succ.IsCritical !== "Y") ? s + 1 : s;
+  }, 0);
 
   // ----- resources -----
   const resKeysInScope = new Set(asg.map(a => a.ResourceKey));
@@ -668,7 +681,8 @@ function rollup(level, scopeKey, model) {
     milestonesTotal: milestones.length,
     milestonesRemaining: milestones.filter(a => a.Status !== "Complete").length,
     overdueMilestones,
-    unlinkedCount, leadsCount, lagsCount, highFloatCount, relCount: relInScope.length,
+    unlinkedCount, leadsCount, lagsCount, nonFsCount, highFloatCount, highDurationCount,
+    invalidDatesCount, missingResourcesCount, criticalPathBreaks, relCount: relInScope.length,
     avgUtilization, overAllocatedCount, resCount: resInScope.length
   };
 }
@@ -747,6 +761,10 @@ const KPI_REGISTRY = [
     definition: "Share of relationships carrying a positive lag.",
     formula: n => n.relCount ? n.lagsCount / n.relCount : null, unit: "pct", decimals: 1, target: 0.05,
     direction: "lower-better", rag: { green: 0.05, amber: 0.1 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
+  { id: "dcma_nonfs", aspect: "integrity", name: "DCMA 4 · Non-FS Relationships %", shortName: "Non-FS %",
+    definition: "Share of relationships that aren't simple Finish-to-Start.",
+    formula: n => n.relCount ? n.nonFsCount / n.relCount : null, unit: "pct", decimals: 1, target: 0.1,
+    direction: "lower-better", rag: { green: 0.1, amber: 0.2 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
   { id: "dcma_high_float", aspect: "integrity", name: "DCMA 6 · High Float %", shortName: "High Float %",
     definition: "Share of activities with total float over 44 working days.",
     formula: n => n.count ? n.highFloatCount / n.count : null, unit: "pct", decimals: 1, target: 0.05,
@@ -755,6 +773,22 @@ const KPI_REGISTRY = [
     definition: "Share of activities with total float below zero.",
     formula: n => n.count ? n.negFloatCount / n.count : null, unit: "pct", decimals: 1, target: 0,
     direction: "lower-better", rag: { green: 0, amber: 0.02 }, levels: ["portfolio", "project", "wbs"], isHeadline: true },
+  { id: "dcma_high_duration", aspect: "integrity", name: "DCMA 8 · High Duration %", shortName: "High Duration %",
+    definition: "Share of non-milestone activities with original duration over 44 working days.",
+    formula: n => n.count ? n.highDurationCount / n.count : null, unit: "pct", decimals: 1, target: 0.05,
+    direction: "lower-better", rag: { green: 0.05, amber: 0.1 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
+  { id: "dcma_invalid_dates", aspect: "integrity", name: "DCMA 9 · Invalid Dates %", shortName: "Invalid Dates %",
+    definition: "Share of incomplete activities with an early start before the project's data date.",
+    formula: n => n.count ? n.invalidDatesCount / n.count : null, unit: "pct", decimals: 1, target: 0,
+    direction: "lower-better", rag: { green: 0, amber: 0.02 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
+  { id: "dcma_missing_resources", aspect: "integrity", name: "DCMA 10 · Missing Resources %", shortName: "Missing Res. %",
+    definition: "Share of activities with no resource/cost assignment.",
+    formula: n => n.count ? n.missingResourcesCount / n.count : null, unit: "pct", decimals: 1, target: 0.05,
+    direction: "lower-better", rag: { green: 0.05, amber: 0.1 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
+  { id: "dcma_critical_path_breaks", aspect: "integrity", name: "DCMA 12 · Critical Path Breaks", shortName: "Path Breaks",
+    definition: "Relationships where a critical predecessor feeds a non-critical successor — a network discontinuity.",
+    formula: n => n.criticalPathBreaks, unit: "count", decimals: 0, target: 0, direction: "lower-better",
+    rag: { green: 0, amber: 1 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
 
   // ---- resources: adequate? ----
   { id: "resource_utilization", aspect: "resources", name: "Avg Resource Utilization", shortName: "Utilization",
