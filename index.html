@@ -119,6 +119,12 @@
   .titlestrip h1{ font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
   .titlestrip .datadate{ font-family:'JetBrains Mono', monospace; font-size: 11px; color: var(--paper-dim); text-align: right; line-height: 1.7; }
   .titlestrip .datadate b{ color: var(--paper); font-weight: 500; }
+  .theme-toggle-btn{
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    border: 1px solid var(--bp-panel-line); background: var(--bp-panel); color: var(--paper);
+    font-size: 16px; cursor: pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .theme-toggle-btn:hover{ border-color: var(--data-cyan); }
 
   .navbar{ position: sticky; top: 0; z-index: 40; background: var(--bp-navy-deep); border-bottom: 1px solid var(--bp-line); }
   .navrow{ display:flex; gap: 2px; padding: 0 32px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -273,9 +279,14 @@
       <p class="eyebrow">Construction Planning Department — Egypt &amp; Gulf Portfolio</p>
       <h1>Portfolio Overview</h1>
     </div>
-    <div class="datadate">
-      DATA DATE&nbsp; <b>16&nbsp;AUG&nbsp;2026</b><br>
-      PROJECTS TRACKED&nbsp; <b>4</b>
+    <div style="display:flex; align-items:flex-end; gap:14px;">
+      <div class="datadate">
+        DATA DATE&nbsp; <b id="hdr-datadate">—</b><br>
+        PROJECTS TRACKED&nbsp; <b id="hdr-projectcount">—</b>
+      </div>
+      <button type="button" id="theme-toggle" class="theme-toggle-btn" title="Toggle light/dark theme" aria-label="Toggle light/dark theme">
+        <span id="theme-toggle-icon">◐</span>
+      </button>
     </div>
   </div>
 
@@ -416,14 +427,41 @@
         <div class="tablewrap" style="max-height: 560px; overflow-y: auto;"><table id="explorer-table"></table></div>
       </div>
     </section>
+
+    <section class="content" id="sec-data">
+      <p class="sectionlabel">10 · Data Source <span class="hint">update the schedule data behind this dashboard</span></p>
+      <div class="maingrid even">
+        <div class="panel">
+          <h2>Currently Loaded Files <span class="tag" id="data-file-count">—</span></h2>
+          <div class="tablewrap"><table id="data-files-table"></table></div>
+        </div>
+        <div class="panel">
+          <h2>Add or Replace a Project Snapshot <span class="tag">GITHUB</span></h2>
+          <p style="font-size:12px; color:var(--paper-dim); line-height:1.6; margin:0 0 14px;">
+            This page has no backend — every time it loads, it fetches whatever files <code>data/manifest.json</code> lists straight from this repo and recomputes every KPI client-side. To update the data:
+          </p>
+          <ol style="font-size:12px; color:var(--paper-dim); line-height:1.9; margin:0 0 18px; padding-left:18px;">
+            <li>Export a fresh <code>.xer</code>, P6 <code>.xml</code>, or the Excel template, named <code>ProjectKey_yyyy-MM-dd.ext</code></li>
+            <li>Upload it into <code>data/</code> (link below)</li>
+            <li>Add its filename to the <code>files</code> array in <code>manifest.json</code> (link below)</li>
+            <li>Reload this page — no rebuild or redeploy needed</li>
+          </ol>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <a href="https://github.com/sherifyehiya/construction-planning-dashboard/upload/main/data" target="_blank" rel="noopener" class="chip" style="text-align:center; text-decoration:none;">Upload files to data/ →</a>
+            <a href="https://github.com/sherifyehiya/construction-planning-dashboard/edit/main/data/manifest.json" target="_blank" rel="noopener" class="chip" style="text-align:center; text-decoration:none;">Edit manifest.json →</a>
+            <a href="https://github.com/sherifyehiya/construction-planning-dashboard/tree/main/data" target="_blank" rel="noopener" class="chip" style="text-align:center; text-decoration:none;">Browse / download data/ →</a>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <div class="titleblock">
     <div class="tb-cell"><div class="tb-label">Project</div><div class="tb-value">Planning Dept — Portfolio Dashboard</div></div>
-    <div class="tb-cell"><div class="tb-label">Sheet</div><div class="tb-value">01 OF 09</div></div>
-    <div class="tb-cell"><div class="tb-label">Data Date</div><div class="tb-value">16-AUG-2026</div></div>
-    <div class="tb-cell"><div class="tb-label">Source</div><div class="tb-value">XLSX · XER · XML</div></div>
-    <div class="tb-cell"><div class="tb-label">Status</div><div class="tb-value" style="color:var(--data-cyan)">SNAPSHOT — NOT LIVE</div></div>
+    <div class="tb-cell"><div class="tb-label">Sheet</div><div class="tb-value" id="tb-sheet">01 OF 10</div></div>
+    <div class="tb-cell"><div class="tb-label">Data Date</div><div class="tb-value" id="tb-datadate">—</div></div>
+    <div class="tb-cell"><div class="tb-label">Source</div><div class="tb-value" id="tb-source">—</div></div>
+    <div class="tb-cell"><div class="tb-label">Status</div><div class="tb-value" style="color:var(--data-cyan)" id="tb-status">LOADING…</div></div>
   </div>
 
   <div id="loading-overlay" style="position:fixed; inset:0; background:var(--bp-navy-deep); display:flex; align-items:center; justify-content:center; z-index:100; flex-direction:column; gap:12px;">
@@ -456,6 +494,7 @@ const SECTIONS = [
   {id:"sec-slippage", label:"07 · Slippage"},
   {id:"sec-actions", label:"08 · Issues & Actions"},
   {id:"sec-explorer", label:"09 · Activity Explorer"},
+  {id:"sec-data", label:"10 · Data Source"},
 ];
 const CAT_COLORS = ["var(--data-cyan)", "var(--bp-line)", "var(--paper-dim)", "var(--status-amber)"];
 
@@ -481,8 +520,9 @@ function svgGauge({frac, display, label, color}){
     if (clamped > 0.004) {
       const ang = Math.PI - clamped*Math.PI;
       const [xf,yf] = pt(r, ang);
-      const largeArc = clamped > 0.5 ? 1 : 0;
-      fillArcSvg = `<path d="M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 ${largeArc} 1 ${xf.toFixed(1)} ${yf.toFixed(1)}" fill="none" style="stroke:${color}" stroke-width="13" stroke-linecap="round"/>`;
+      // Sweep never exceeds 180°, so this is always the "small" arc (large-arc-flag = 0) —
+      // it was previously toggled at clamped>0.5, which drew the arc the wrong way round.
+      fillArcSvg = `<path d="M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 0 1 ${xf.toFixed(1)} ${yf.toFixed(1)}" fill="none" style="stroke:${color}" stroke-width="13" stroke-linecap="round"/>`;
     }
   }
   const valueColor = frac===null ? "var(--paper-dim)" : color;
@@ -520,7 +560,67 @@ function switchTab(id){
   activeTab = id;
   document.querySelectorAll("section.content").forEach(s => s.classList.toggle("active", s.id===id));
   document.querySelectorAll(".navtab").forEach(t => t.classList.toggle("active", t.id === "nav-"+id));
+  const idx = SECTIONS.findIndex(s => s.id === id);
+  const sheetEl = document.getElementById("tb-sheet");
+  if (sheetEl && idx >= 0) sheetEl.textContent = `${String(idx+1).padStart(2,"0")} OF ${SECTIONS.length}`;
   window.scrollTo({top:0, behavior:"instant"});
+}
+
+// ===== Light/dark theme toggle =====
+function currentEffectiveTheme(){
+  const explicit = document.documentElement.dataset.theme;
+  if (explicit) return explicit;
+  return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+}
+function updateThemeIcon(){
+  const icon = document.getElementById("theme-toggle-icon");
+  if (icon) icon.textContent = currentEffectiveTheme() === "dark" ? "☾" : "☀";
+}
+function setupThemeToggle(){
+  let saved = null;
+  try { saved = localStorage.getItem("theme"); } catch {}
+  if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  updateThemeIcon();
+  document.getElementById("theme-toggle").addEventListener("click", () => {
+    const next = currentEffectiveTheme() === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem("theme", next); } catch {}
+    updateThemeIcon();
+  });
+}
+
+// ===== Header / footer metadata (data date, source formats, live status) =====
+function fmtHeaderDate(d){
+  if (!d) return "—";
+  return d.toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"}).toUpperCase().split(" ").join(" ");
+}
+function fmtFooterDate(d){
+  if (!d) return "—";
+  return d.toLocaleDateString("en-GB", {day:"2-digit", month:"short", year:"numeric"}).toUpperCase().replace(/ /g, "-");
+}
+function renderHeaderMeta(dataDate, sourceFormats){
+  document.getElementById("hdr-datadate").textContent = fmtHeaderDate(dataDate);
+  document.getElementById("hdr-projectcount").textContent = PROJECTS.length;
+  document.getElementById("tb-datadate").textContent = fmtFooterDate(dataDate);
+  document.getElementById("tb-source").textContent = sourceFormats && sourceFormats.length ? sourceFormats.join(" · ") : "—";
+  document.getElementById("tb-status").textContent = "LIVE — data/ folder";
+}
+
+// ===== 10 · Data Source =====
+async function renderDataSourcePage(){
+  const tableEl = document.getElementById("data-files-table");
+  try {
+    const manifest = await (await fetch("data/manifest.json")).json();
+    document.getElementById("data-file-count").textContent = manifest.files.length + " FILES";
+    const rows = manifest.files.map(f => {
+      const ext = f.split(".").pop().toUpperCase();
+      const m = f.match(/_(\d{4}-\d{2}-\d{2})\./);
+      return `<tr><td class="pname">${f}</td><td>${ext}</td><td>${m ? m[1] : "—"}</td></tr>`;
+    }).join("");
+    tableEl.innerHTML = `<thead><tr><th>Filename</th><th>Format</th><th>Snapshot Date</th></tr></thead><tbody>${rows}</tbody>`;
+  } catch (err) {
+    tableEl.innerHTML = `<tbody><tr><td class="empty-state" colspan="3"><b>Couldn't load manifest.json</b>${err.message || err}</td></tr></tbody>`;
+  }
 }
 
 function renderOverviewKpis(){
@@ -837,11 +937,13 @@ function render(){
 }
 
 async function boot(){
+  setupThemeToggle();
   try {
     const data = await loadDashboardData();
     PROJECTS = data.PROJECTS; PORTFOLIO = data.PORTFOLIO; DCMA = data.DCMA;
     COST_BY_TYPE = data.COST_BY_TYPE; COST_BY_PROJECT = data.COST_BY_PROJECT;
     SCURVE = data.SCURVE; MILESTONES = data.MILESTONES; RESOURCES = data.RESOURCES; ACTIVITIES = data.ACTIVITIES;
+    renderHeaderMeta(data.dataDate, data.sourceFormats);
   } catch (err) {
     document.getElementById("loading-overlay").innerHTML =
       `<div class="mono" style="color:var(--hi-vis); font-size:12px; max-width:340px; text-align:center; line-height:1.6;">
@@ -867,6 +969,7 @@ async function boot(){
   setupDetailControls();
   renderSlippage();
   renderActions();
+  renderDataSourcePage();
   render();
   switchTab("sec-overview");
 

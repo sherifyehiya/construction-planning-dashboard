@@ -549,7 +549,12 @@ function computeDashboardData(model) {
     };
   });
 
-  return { PROJECTS, PORTFOLIO, DCMA, COST_BY_TYPE, COST_BY_PROJECT, MILESTONES, SCURVE, ACTIVITIES, RESOURCES };
+  // ----- header/footer metadata -----
+  const snapDates = projects.map(p => p.SnapshotDate).filter(Boolean);
+  const dataDate = snapDates.length ? new Date(Math.max(...snapDates)) : null;
+  const sourceFormats = [...new Set(projects.map(p => p.SourceFormat).filter(Boolean))].sort();
+
+  return { PROJECTS, PORTFOLIO, DCMA, COST_BY_TYPE, COST_BY_PROJECT, MILESTONES, SCURVE, ACTIVITIES, RESOURCES, dataDate, sourceFormats };
 }
 
 async function loadDashboardData() {
