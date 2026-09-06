@@ -559,5 +559,224 @@ function computeDashboardData(model) {
 
 async function loadDashboardData() {
   const model = await loadRawModel();
-  return computeDashboardData(model);
+  const computed = computeDashboardData(model);
+  computed.model = model; // exposed for rollup() — see below
+  return computed;
 }
+
+// =====================================================================================
+// ROLLUP ENGINE — aggregates the raw model into one node of measures for any scope:
+// portfolio (all activities), project (ProjectKey), wbs (ProjectKey+WBSKey), or a single
+// activity. Every KPI_REGISTRY formula reads from this node — no KPI re-derives its own
+// slice of the model, so "SPI 0.88" and "SPI 0.88 on the MEP WBS of CairoHQ" are the same
+// formula against two different nodes.
+// =====================================================================================
+
+function scopeActivities(level, scopeKey, model) {
+  switch (level) {
+    case "project": return model.activities.filter(a => a.ProjectKey === scopeKey.project);
+    case "wbs": return model.activities.filter(a => a.ProjectKey === scopeKey.project && a.WBSKey === scopeKey.wbs);
+    case "activity": return model.activities.filter(a => a.ActivityKey === scopeKey.activity);
+    case "portfolio":
+    default: return model.activities;
+  }
+}
+
+function rollup(level, scopeKey, model) {
+  const { projects, activities: allActivities, relationships, resources, assignments } = model;
+  const acts = scopeActivities(level, scopeKey, model);
+  const actKeySet = new Set(acts.map(a => a.ActivityKey));
+  const projByKey = Object.fromEntries(projects.map(p => [p.ProjectKey, p]));
+  const activityByKey = Object.fromEntries(allActivities.map(a => [a.ActivityKey, a]));
+
+  // ----- earned value -----
+  const asg = assignments.filter(a => actKeySet.has(a.ActivityKey));
+  const budgetCost = asg.reduce((s, a) => s + a.BudgetedCost, 0);
+  const actualCost = asg.reduce((s, a) => s + a.ActualCost, 0);
+  const activityBudgetedCost = {};
+  asg.forEach(a => { activityBudgetedCost[a.ActivityKey] = (activityBudgetedCost[a.ActivityKey] || 0) + a.BudgetedCost; });
+  const ev = asg.reduce((s, a) => {
+    const act = activityByKey[a.ActivityKey];
+    return s + (act ? (act.PercentComplete / 100) * a.BudgetedCost : 0);
+  }, 0);
+  const pv = acts.reduce((s, a) => {
+    const budCost = activityBudgetedCost[a.ActivityKey];
+    if (!budCost) return s;
+    const snap = projByKey[a.ProjectKey] && projByKey[a.ProjectKey].SnapshotDate;
+    if (!snap) return s;
+    let frac;
+    if (a.ActivityType === "Milestone") frac = (a.EarlyFinish && a.EarlyFinish <= snap) ? 1 : 0;
+    else if (!a.EarlyStart) frac = 0;
+    else {
+      const dur = a.EarlyFinish ? (a.EarlyFinish - a.EarlyStart) / 86400000 : 0;
+      const elapsed = (snap - a.EarlyStart) / 86400000;
+      frac = dur > 0 ? Math.max(0, Math.min(1, elapsed / dur)) : (a.EarlyStart <= snap ? 1 : 0);
+    }
+    return s + frac * budCost;
+  }, 0);
+  const cpi = actualCost ? ev / actualCost : null;
+  const spi = pv ? ev / pv : null;
+  const eac = cpi ? actualCost + (budgetCost - ev) / cpi : null;
+
+  // ----- schedule / progress -----
+  const count = acts.length;
+  const durSum = acts.reduce((s, a) => s + a.OriginalDuration, 0);
+  const weightedComplete = durSum ? acts.reduce((s, a) => s + a.OriginalDuration * a.PercentComplete / 100, 0) / durSum : null;
+  const completeCount = acts.filter(a => a.Status === "Complete").length;
+  const criticalCount = acts.filter(a => a.IsCritical === "Y").length;
+  const negFloatActs = acts.filter(a => a.TotalFloat < 0);
+  const onTimeCount = acts.filter(a => a.Status === "Complete" && a.TotalFloat >= 0).length;
+  const floatSum = acts.reduce((s, a) => s + a.TotalFloat, 0);
+  const milestones = acts.filter(a => a.ActivityType === "Milestone");
+  const overdueMilestones = milestones.filter(a => {
+    if (a.Status === "Complete") return false;
+    const snap = projByKey[a.ProjectKey] && projByKey[a.ProjectKey].SnapshotDate;
+    return snap && a.EarlyFinish && a.EarlyFinish < snap;
+  });
+
+  // ----- integrity (DCMA-style, scoped to relationships touching this activity set) -----
+  const relInScope = relationships.filter(r => actKeySet.has(r.PredecessorActivityKey) || actKeySet.has(r.SuccessorActivityKey));
+  const linkedKeys = new Set();
+  relInScope.forEach(r => { linkedKeys.add(r.PredecessorActivityKey); linkedKeys.add(r.SuccessorActivityKey); });
+  const unlinkedCount = acts.filter(a => !linkedKeys.has(a.ActivityKey)).length;
+  const leadsCount = relInScope.filter(r => r.Lag < 0).length;
+  const lagsCount = relInScope.filter(r => r.Lag > 0).length;
+  const highFloatCount = acts.filter(a => a.TotalFloat > 44).length;
+
+  // ----- resources -----
+  const resKeysInScope = new Set(asg.map(a => a.ResourceKey));
+  const resInScope = resources.filter(r => resKeysInScope.has(r.ResourceKey));
+  const resAgg = {};
+  asg.forEach(a => {
+    if (!resAgg[a.ResourceKey]) resAgg[a.ResourceKey] = { budgetedUnits: 0, actualUnits: 0 };
+    resAgg[a.ResourceKey].budgetedUnits += a.BudgetedUnits;
+    resAgg[a.ResourceKey].actualUnits += a.ActualUnits;
+  });
+  const resUtilList = resInScope
+    .map(r => { const agg = resAgg[r.ResourceKey]; return agg && agg.budgetedUnits ? agg.actualUnits / agg.budgetedUnits : null; })
+    .filter(u => u != null);
+  const avgUtilization = resUtilList.length ? resUtilList.reduce((s, u) => s + u, 0) / resUtilList.length : null;
+  const overAllocatedCount = resUtilList.filter(u => u > 1).length;
+
+  return {
+    level, scopeKey, count, acts,
+    ev, pv, budgetCost, actualCost, cpi, spi, eac,
+    etc: eac != null ? eac - actualCost : null,
+    weightedComplete, completeCount, criticalCount,
+    negFloatCount: negFloatActs.length, negFloatActs,
+    onTimeCount, avgFloat: count ? floatSum / count : null,
+    milestonesTotal: milestones.length,
+    milestonesRemaining: milestones.filter(a => a.Status !== "Complete").length,
+    overdueMilestones,
+    unlinkedCount, leadsCount, lagsCount, highFloatCount, relCount: relInScope.length,
+    avgUtilization, overAllocatedCount, resCount: resInScope.length
+  };
+}
+
+// =====================================================================================
+// KPI REGISTRY — single source of truth. Each entry: {id, aspect, name, shortName,
+// definition, formula(node)=>value|null, unit, decimals, target, direction, rag:{green,
+// amber}|null, levels, isHeadline}. `rag: null` or `target: null` marks a KPI that's
+// informational only — shown without a color/threshold rather than a fabricated one.
+// =====================================================================================
+
+const KPI_REGISTRY = [
+  // ---- schedule: on time? ----
+  { id: "spi", aspect: "schedule", name: "Schedule Performance Index", shortName: "SPI",
+    definition: "Earned value ÷ planned value — below 1.0 means behind schedule in cost-weighted terms. Planned Value here is a linear spread of budgeted cost across each activity's early-date span, not a true baseline.",
+    formula: n => n.spi, unit: "ratio", decimals: 2, target: 1.0, direction: "higher-better",
+    rag: { green: 0.95, amber: 0.85 }, levels: ["portfolio", "project", "wbs"], isHeadline: true },
+  { id: "on_time_pct", aspect: "schedule", name: "Completed On-Time %", shortName: "On-Time %",
+    definition: "Share of completed activities finished with total float ≥ 0.",
+    formula: n => n.completeCount ? n.onTimeCount / n.completeCount : null, unit: "pct", decimals: 0,
+    target: 1.0, direction: "higher-better", rag: { green: 0.9, amber: 0.75 },
+    levels: ["portfolio", "project", "wbs"], isHeadline: true },
+  { id: "avg_float", aspect: "schedule", name: "Average Total Float", shortName: "Avg Float",
+    definition: "Mean total float across scoped activities, in days.",
+    formula: n => n.avgFloat, unit: "days", decimals: 1, target: 5, direction: "higher-better",
+    rag: { green: 5, amber: 0 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
+  { id: "critical_pct", aspect: "schedule", name: "% Critical Activities", shortName: "% Critical",
+    definition: "Share of activities on the critical path. Not inherently bad — a tight network is normal — but very high values leave no flexibility to absorb slips.",
+    formula: n => n.count ? n.criticalCount / n.count : null, unit: "pct", decimals: 0, target: 0.8,
+    direction: "lower-better", rag: { green: 0.7, amber: 0.9 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
+
+  // ---- cost: on budget? ----
+  { id: "cpi", aspect: "cost", name: "Cost Performance Index", shortName: "CPI",
+    definition: "Earned value ÷ actual cost — below 1.0 means the work performed cost more than it earned.",
+    formula: n => n.cpi, unit: "ratio", decimals: 2, target: 1.0, direction: "higher-better",
+    rag: { green: 0.95, amber: 0.85 }, levels: ["portfolio", "project", "wbs"], isHeadline: true },
+  { id: "cv_pct", aspect: "cost", name: "Cost Variance %", shortName: "CV %",
+    definition: "(Actual − Budgeted) ÷ Budgeted cost.",
+    formula: n => n.budgetCost ? (n.actualCost - n.budgetCost) / n.budgetCost : null, unit: "pct", decimals: 1,
+    target: 0, direction: "lower-better", rag: { green: 0, amber: 0.05 },
+    levels: ["portfolio", "project", "wbs"], isHeadline: true },
+  { id: "vac_pct", aspect: "cost", name: "Variance at Completion %", shortName: "VAC %",
+    definition: "(Budgeted − Estimate at Completion) ÷ Budgeted — positive means forecast to finish under budget.",
+    formula: n => (n.budgetCost && n.eac != null) ? (n.budgetCost - n.eac) / n.budgetCost : null, unit: "pct",
+    decimals: 1, target: 0, direction: "higher-better", rag: { green: 0, amber: -0.05 },
+    levels: ["portfolio", "project", "wbs"], isHeadline: true },
+  { id: "eac", aspect: "cost", name: "Estimate at Completion", shortName: "EAC",
+    definition: "Actual cost to date plus the remaining work forecast at the current cost efficiency.",
+    formula: n => n.eac, unit: "egp", decimals: 0, target: null, direction: "lower-better", rag: null,
+    levels: ["portfolio", "project", "wbs"], isHeadline: false },
+  { id: "etc", aspect: "cost", name: "Estimate to Complete", shortName: "ETC",
+    definition: "EAC minus actual cost to date — the forecast remaining spend.",
+    formula: n => n.etc, unit: "egp", decimals: 0, target: null, direction: "lower-better", rag: null,
+    levels: ["portfolio", "project", "wbs"], isHeadline: false },
+
+  // ---- progress: done vs plan? ----
+  { id: "weighted_pct_complete", aspect: "progress", name: "Weighted % Complete", shortName: "% Complete",
+    definition: "Duration-weighted percent complete. Shown without a target or RAG color — there's no defensible pace target without a baseline to compare against.",
+    formula: n => n.weightedComplete, unit: "pct", decimals: 0, target: null, direction: "higher-better",
+    rag: null, levels: ["portfolio", "project", "wbs"], isHeadline: true },
+  { id: "completion_rate", aspect: "progress", name: "Activities Complete %", shortName: "Complete %",
+    definition: "Share of scoped activities marked Complete (unweighted by duration).",
+    formula: n => n.count ? n.completeCount / n.count : null, unit: "pct", decimals: 0, target: null,
+    direction: "higher-better", rag: null, levels: ["portfolio", "project", "wbs"], isHeadline: false },
+
+  // ---- integrity: trust the plan? (DCMA 14-point, scoped) ----
+  { id: "dcma_logic", aspect: "integrity", name: "DCMA 1 · Logic %", shortName: "Logic %",
+    definition: "Share of activities missing a predecessor or successor.",
+    formula: n => n.count ? n.unlinkedCount / n.count : null, unit: "pct", decimals: 1, target: 0.05,
+    direction: "lower-better", rag: { green: 0.05, amber: 0.1 }, levels: ["portfolio", "project", "wbs"], isHeadline: true },
+  { id: "dcma_leads", aspect: "integrity", name: "DCMA 2 · Leads %", shortName: "Leads %",
+    definition: "Share of relationships carrying a negative lag.",
+    formula: n => n.relCount ? n.leadsCount / n.relCount : null, unit: "pct", decimals: 1, target: 0,
+    direction: "lower-better", rag: { green: 0, amber: 0.02 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
+  { id: "dcma_lags", aspect: "integrity", name: "DCMA 3 · Lags %", shortName: "Lags %",
+    definition: "Share of relationships carrying a positive lag.",
+    formula: n => n.relCount ? n.lagsCount / n.relCount : null, unit: "pct", decimals: 1, target: 0.05,
+    direction: "lower-better", rag: { green: 0.05, amber: 0.1 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
+  { id: "dcma_high_float", aspect: "integrity", name: "DCMA 6 · High Float %", shortName: "High Float %",
+    definition: "Share of activities with total float over 44 working days.",
+    formula: n => n.count ? n.highFloatCount / n.count : null, unit: "pct", decimals: 1, target: 0.05,
+    direction: "lower-better", rag: { green: 0.05, amber: 0.1 }, levels: ["portfolio", "project", "wbs"], isHeadline: false },
+  { id: "dcma_neg_float", aspect: "integrity", name: "DCMA 7 · Negative Float %", shortName: "Neg. Float %",
+    definition: "Share of activities with total float below zero.",
+    formula: n => n.count ? n.negFloatCount / n.count : null, unit: "pct", decimals: 1, target: 0,
+    direction: "lower-better", rag: { green: 0, amber: 0.02 }, levels: ["portfolio", "project", "wbs"], isHeadline: true },
+
+  // ---- resources: adequate? ----
+  { id: "resource_utilization", aspect: "resources", name: "Avg Resource Utilization", shortName: "Utilization",
+    definition: "Actual vs. budgeted units, averaged across resources with assignment data in scope.",
+    formula: n => n.avgUtilization, unit: "pct", decimals: 0, target: 0.85, direction: "higher-better",
+    rag: { green: 0.7, amber: 0.5 }, levels: ["portfolio", "project"], isHeadline: true },
+  { id: "over_allocated_count", aspect: "resources", name: "Over-Allocated Resources", shortName: "Over-Allocated",
+    definition: "Resources where actual units consumed exceed budgeted units.",
+    formula: n => n.overAllocatedCount, unit: "count", decimals: 0, target: 0, direction: "lower-better",
+    rag: { green: 0, amber: 2 }, levels: ["portfolio", "project"], isHeadline: false },
+
+  // ---- risk: what's at risk? ----
+  { id: "neg_float_count", aspect: "risk", name: "Negative-Float Activities", shortName: "Neg. Float",
+    definition: "Activities currently behind their logic network — the earliest signal of trouble.",
+    formula: n => n.negFloatCount, unit: "count", decimals: 0, target: 0, direction: "lower-better",
+    rag: { green: 0, amber: 2 }, levels: ["portfolio", "project", "wbs"], isHeadline: true },
+  { id: "milestones_at_risk", aspect: "risk", name: "Overdue Milestones", shortName: "Overdue",
+    definition: "Milestones past their planned finish that are still not complete.",
+    formula: n => n.overdueMilestones.length, unit: "count", decimals: 0, target: 0, direction: "lower-better",
+    rag: { green: 0, amber: 1 }, levels: ["portfolio", "project", "wbs"], isHeadline: true },
+  { id: "open_issues_count", aspect: "risk", name: "Open Issues", shortName: "Open Issues",
+    definition: "Items on the manually maintained Issues & Actions log that aren't resolved. Not derived from P6 data — the index.html page attaches this count onto the rollup node itself before formulas run.",
+    formula: n => n.openIssuesCount != null ? n.openIssuesCount : null, unit: "count", decimals: 0, target: 0,
+    direction: "lower-better", rag: { green: 0, amber: 3 }, levels: ["portfolio", "project"], isHeadline: false }
+];
